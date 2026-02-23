@@ -1,6 +1,6 @@
 import express from "express"
-import {  getfeedBack } from "../controllers/feedback.controllers.js"
-import { postFeedback } from "../controllers/feedback.controllers.js"
+import {  getfeedBack, postFeedback } from "../controllers/feedback.controllers.js"
+
 import { updateFeedback } from "../controllers/feedback.controllers.js"
 import { deleteFeedback } from "../controllers/feedback.controllers.js"
 const patient_feedback=express.Router()

@@ -1,6 +1,6 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { Routes, Route } from "react-router-dom";
-
+import PatientComplaints from "./pages/patient_complaints";
 import Sidebar from "./components/sidebar";
 import Home from "./pages/home";
 import PatientFeedback from "./pages/patient_feedback";
@@ -17,6 +17,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/feedback" element={<PatientFeedback />} />
+          <Route path="/complaints" element={<PatientComplaints />} />
         </Routes>
       </Box>
 

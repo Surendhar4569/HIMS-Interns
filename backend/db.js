@@ -1,11 +1,11 @@
 import {Pool} from "pg"
-import "dotenv/congig"
+import "dotenv/config"
 const con=new Pool({
     host:"localhost",
     user:"postgres",
     port:5432,
     password:process.env.password,
-    database:process.env.database_name
+    database:process.env.database
 
     
 })
