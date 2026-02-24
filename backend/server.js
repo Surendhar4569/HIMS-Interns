@@ -1,10 +1,11 @@
 import express from "express"
 import "dotenv/config.js"
-
-import patient_feedback from "./routes/feedback_Routes.js"
+import cors from "cors"
+import patient_feedback from "./routes/feedback.Routes.js"
 
 import patient_complaints from "./routes/complaints.Routes.js"
 const app=express()
+app.use(cors())
 app.use(express.json())
 const PORT=process.env.PORT || 3000
 

@@ -22,26 +22,23 @@ export default function PatientComplaints() {
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    complaint_id: "",
     patient_id: "",
     patient_name: "",
     contact_number: "",
     priority: "",
+    status: "",
+    attachment: null,
     complaint_description: "",
   });
 
   const [errors, setErrors] = useState({});
 
-  //  Handle Input Change
+  // Handle Input Change
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     // Allow only numbers for specific fields
-    if (
-      name === "complaint_id" ||
-      name === "patient_id" ||
-      name === "contact_number"
-    ) {
+    if (name === "patient_id" || name === "contact_number") {
       if (!/^\d*$/.test(value)) return;
     }
 
@@ -52,13 +49,15 @@ export default function PatientComplaints() {
     }
   };
 
-  //  Validation
+  // Handle File Upload
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setFormData({ ...formData, attachment: file });
+  };
+
+  // Validation
   const validate = () => {
     let newErrors = {};
-
-    if (!formData.complaint_id.trim()) {
-      newErrors.complaint_id = "Complaint ID is required";
-    }
 
     if (!formData.patient_id.trim()) {
       newErrors.patient_id = "Patient ID is required";
@@ -78,6 +77,10 @@ export default function PatientComplaints() {
       newErrors.priority = "Priority is required";
     }
 
+    if (!formData.status) {
+      newErrors.status = "Status is required";
+    }
+
     if (!formData.complaint_description.trim()) {
       newErrors.complaint_description = "Description is required";
     }
@@ -86,21 +89,21 @@ export default function PatientComplaints() {
     return Object.keys(newErrors).length === 0;
   };
 
-  //  Reset Form
+  // Reset Form
   const resetForm = () => {
     setFormData({
-      complaint_id: "",
       patient_id: "",
       patient_name: "",
       contact_number: "",
       priority: "",
+      status: "",
+      attachment: null,
       complaint_description: "",
     });
-
     setErrors({});
   };
 
-  //  Submit
+  // Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -109,23 +112,37 @@ export default function PatientComplaints() {
     try {
       setLoading(true);
 
-      const dataToSend = {
-        ...formData,
-        complaint_datetime: new Date().toISOString(), // Auto timestamp
-      };
+      // Create FormData for multipart/form-data support
+      const formPayload = new FormData();
 
+      // Append text fields
+      formPayload.append("patient_id", formData.patient_id);
+      formPayload.append("patient_name", formData.patient_name);
+      formPayload.append("contact_number", formData.contact_number);
+      formPayload.append("priority", formData.priority);
+      formPayload.append("status", formData.status);
+      formPayload.append("complaint_description", formData.complaint_description);
+      formPayload.append("complaint_datetime", new Date().toISOString());
+
+      // Append file only if it exists
+      if (formData.attachment) {
+        formPayload.append("attachment", formData.attachment);
+      }
+      
       const response = await fetch("http://localhost:3000/complaints/postComplaint", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(dataToSend),
+        // Note: Do NOT set Content-Type header when sending FormData
+        body: formPayload,
       });
 
-      if (response.ok) {
+      const result = await response.json();
+      
+
+      // Your backend returns { success: true }
+      if (response.ok && result.success) {
         toast({
           title: "Complaint Submitted",
-          description: "Complaint saved successfully",
+          description: result.message || "Complaint saved successfully",
           status: "success",
           duration: 3000,
           isClosable: true,
@@ -133,7 +150,7 @@ export default function PatientComplaints() {
 
         resetForm();
       } else {
-        throw new Error("Error submitting complaint");
+        throw new Error(result.message || "Error submitting complaint");
       }
     } catch (error) {
       toast({
@@ -149,7 +166,7 @@ export default function PatientComplaints() {
   };
 
   return (
-    <Box flex="1" display="flex" justifyContent="center" alignItems="center">
+    <Box flex="1" display="flex" justifyContent="center" alignItems="center" py={10}>
       <Container maxW="5xl" bg="white" p={8} borderRadius="2xl" boxShadow="xl">
         <Box mb={8}>
           <Heading size="lg">Add New Complaint</Heading>
@@ -160,68 +177,52 @@ export default function PatientComplaints() {
 
         <form onSubmit={handleSubmit}>
           <VStack spacing={6} align="stretch">
-
             {/* Row 1 */}
-            <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={6}>
-
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
               <GridItem>
-                <FormControl isRequired isInvalid={errors.complaint_id}>
-                  <FormLabel>Complaint ID</FormLabel>
-                  <Input
-                    name="complaint_id"
-                    value={formData.complaint_id}
-                    onChange={handleChange}
-                    inputMode="numeric"
-                  />
-                  <FormErrorMessage>{errors.complaint_id}</FormErrorMessage>
-                </FormControl>
-              </GridItem>
-
-              <GridItem>
-                <FormControl isRequired isInvalid={errors.patient_id}>
+                <FormControl isRequired isInvalid={!!errors.patient_id}>
                   <FormLabel>Patient ID</FormLabel>
                   <Input
                     name="patient_id"
+                    placeholder="Enter Patient ID"
                     value={formData.patient_id}
                     onChange={handleChange}
-                    inputMode="numeric"
                   />
                   <FormErrorMessage>{errors.patient_id}</FormErrorMessage>
                 </FormControl>
               </GridItem>
 
               <GridItem>
-                <FormControl isRequired isInvalid={errors.patient_name}>
+                <FormControl isRequired isInvalid={!!errors.patient_name}>
                   <FormLabel>Patient Name</FormLabel>
                   <Input
                     name="patient_name"
+                    placeholder="Enter Patient Name"
                     value={formData.patient_name}
                     onChange={handleChange}
                   />
                   <FormErrorMessage>{errors.patient_name}</FormErrorMessage>
                 </FormControl>
               </GridItem>
-
             </Grid>
 
             {/* Row 2 */}
             <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
-
               <GridItem>
-                <FormControl isRequired isInvalid={errors.contact_number}>
+                <FormControl isRequired isInvalid={!!errors.contact_number}>
                   <FormLabel>Contact Number</FormLabel>
                   <Input
                     name="contact_number"
+                    placeholder="10-digit mobile number"
                     value={formData.contact_number}
                     onChange={handleChange}
-                    inputMode="numeric"
                   />
                   <FormErrorMessage>{errors.contact_number}</FormErrorMessage>
                 </FormControl>
               </GridItem>
 
               <GridItem>
-                <FormControl isRequired isInvalid={errors.priority}>
+                <FormControl isRequired isInvalid={!!errors.priority}>
                   <FormLabel>Priority</FormLabel>
                   <Select
                     name="priority"
@@ -236,15 +237,47 @@ export default function PatientComplaints() {
                   <FormErrorMessage>{errors.priority}</FormErrorMessage>
                 </FormControl>
               </GridItem>
+            </Grid>
 
+            {/* Row 3 */}
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
+              <GridItem>
+                <FormControl isRequired isInvalid={!!errors.status}>
+                  <FormLabel>Status</FormLabel>
+                  <Select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    placeholder="Select status"
+                  >
+                    <option value="New">New</option>
+                    <option value="Open">Open</option>
+                  </Select>
+                  <FormErrorMessage>{errors.status}</FormErrorMessage>
+                </FormControl>
+              </GridItem>
+
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Attachment (Optional Proof)</FormLabel>
+                  <Input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    onChange={handleFileChange}
+                    p={1}
+                    variant="unstyled"
+                  />
+                </FormControl>
+              </GridItem>
             </Grid>
 
             {/* Description */}
-            <FormControl isRequired isInvalid={errors.complaint_description}>
+            <FormControl isRequired isInvalid={!!errors.complaint_description}>
               <FormLabel>Complaint Description</FormLabel>
               <Textarea
                 rows={4}
                 name="complaint_description"
+                placeholder="Describe the issue in detail..."
                 value={formData.complaint_description}
                 onChange={handleChange}
               />
@@ -257,12 +290,11 @@ export default function PatientComplaints() {
                 colorScheme="blue"
                 size="lg"
                 isLoading={loading}
-                isDisabled={loading}
+                loadingText="Submitting..."
               >
                 Submit Complaint
               </Button>
             </Box>
-
           </VStack>
         </form>
       </Container>
