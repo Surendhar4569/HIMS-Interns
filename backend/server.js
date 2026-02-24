@@ -10,8 +10,7 @@ import con from "./db.js"
 const app=express()
 app.use(
   cors({
-    origin: "http://localhost:5174",
-    credentials: false,
+    origin: "http://localhost:5173",
   }),
 );
 app.use(express.json())
