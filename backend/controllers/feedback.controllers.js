@@ -12,7 +12,7 @@ export const  getfeedBack=async (req,res)=>{
 
     }
     catch(error){
-        console.log("error fetching",error)
+        console.log("error fetching",error.message)
         return res.status(500).json({
             sucess:false,
             message:"internal server error"
@@ -24,7 +24,6 @@ export const  getfeedBack=async (req,res)=>{
 
 
 export const postFeedback = async (req, res) => {
-  
   const client = await con.connect();
 
   try {
@@ -38,7 +37,7 @@ export const postFeedback = async (req, res) => {
       consent_flag,
     } = req.body;
 
-    if (!patient_id || !service_type || !rating) {
+    if (!patient_id || !service_type || !rating || !feedback_mode) {
       return res.status(400).json({
         success: false,
         message: "Required fields are missing",
@@ -81,7 +80,6 @@ export const postFeedback = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error inserting feedback:", error);
     await client.query("ROLLBACK");
 
     if (error.code === "23505") {
@@ -91,11 +89,11 @@ export const postFeedback = async (req, res) => {
       });
     }
 
+    console.error("Error inserting feedback:", error.message);
 
     return res.status(500).json({
       success: false,
       message: "Internal server error",
-      error: error,
     });
 
   } finally {
