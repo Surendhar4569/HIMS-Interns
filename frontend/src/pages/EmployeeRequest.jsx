@@ -32,6 +32,8 @@ function EmployeeRequest() {
   });
 
   const [errors, setErrors] = useState({});
+  const [nextSequence, setNextSequence] = useState("001");
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     fetchNextRequestNumber();
@@ -43,7 +45,6 @@ function EmployeeRequest() {
       "http://localhost:3000/request/getNextRequestNumber"
     );
 
-    // 🔒 Safety check (prevents res.json() crash)
     if (!res.ok) {
       console.error("API Error:", res.status);
       return;
@@ -51,24 +52,54 @@ function EmployeeRequest() {
 
     const data = await res.json();
 
-const previewNumber = `${data.next_sequence}`;
+    // Store next serial sequence from backend (001, 002, etc.)
+    const sequence = data.next_sequence || "001";
+    setNextSequence(sequence);
 
-setFormData((prev) => ({
-  ...prev,
-  request_number: previewNumber,
-}));
+    // Default preview before CR/AR selection
+    setFormData((prev) => ({
+      ...prev,
+      request_number: sequence,
+    }));
   } catch (error) {
     console.error("Fetch failed:", error);
   }
 };
 
   const handleChange = (e) => {
-    if (e.target.name === "attachment") {
-      setFormData({ ...formData, attachment: e.target.files[0] });
-    } else {
-      setFormData({ ...formData, [e.target.name]: e.target.value });
+  const { name, value } = e.target;
+
+  // File upload handling (unchanged)
+  if (name === "attachment") {
+    setFormData({ ...formData, attachment: e.target.files[0] });
+    return;
+  }
+
+  // 🔥 Dynamic Request Number Logic (CR / AR)
+  if (name === "request_category") {
+    let previewNumber = nextSequence; // default = 001
+
+    if (value === "CR") {
+      previewNumber = `CR-${currentYear}-${nextSequence}`;
+    } else if (value === "AR") {
+      previewNumber = `AR-${currentYear}-${nextSequence}`;
     }
-  };
+
+    setFormData({
+      ...formData,
+      request_category: value,
+      request_number: previewNumber,
+    });
+
+    return;
+  }
+
+  // Normal field updates (title, description, priority, etc.)
+  setFormData({
+    ...formData,
+    [name]: value,
+  });
+};
 
   const validate = () => {
     let newErrors = {};
@@ -187,9 +218,7 @@ setFormData((prev) => ({
                   onChange={handleChange}
                 >
                   <option value="CR">Change Request (CR)</option>
-                  <option value="AR">
-                    Additional Requirement (AR)
-                  </option>
+                  <option value="AR">Additional Requirement (AR)</option>
                 </Select>
                 <FormErrorMessage>
                   {errors.request_category}
