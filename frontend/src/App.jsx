@@ -5,6 +5,7 @@ import Sidebar from "./components/sidebar";
 import Home from "./pages/home";
 import PatientFeedback from "./pages/patient_feedback";
 import PatientComplaints from "./pages/patient_complaints";
+import EmployeeRequest from "./pages/EmployeeRequest";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/feedback" element={<PatientFeedback />} />
           <Route path="/complaints" element={<PatientComplaints />} />
+          <Route path="/request" element={<EmployeeRequest />} />
         </Routes>
       </Box>
 
