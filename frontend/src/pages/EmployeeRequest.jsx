@@ -113,6 +113,9 @@ function EmployeeRequest() {
     if (!formData.requirement_description)
       newErrors.requirement_description = "Description is required";
 
+    if (!formData.related_module)
+  newErrors.related_module = "Related Module is required";
+
     if (!formData.priority)
       newErrors.priority = "Priority is required";
 
@@ -259,15 +262,12 @@ function EmployeeRequest() {
             </GridItem>
 
             <GridItem>
-              <FormControl>
+              <FormControl isRequired isInvalid={errors.related_module}>
                 <FormLabel>Related Module</FormLabel>
-                <Select
-                  name="related_module"
-                  onChange={handleChange}
-                  defaultValue="Billing"
-                >
-                  <option value="Billing">Billing</option>
+                <Select name="related_module" placeholder="Select Related Module" value={formData.related_module}  onChange={handleChange}>
+                <option value="Billing">Billing</option>
                 </Select>
+                <FormErrorMessage>{errors.related_module}</FormErrorMessage>
               </FormControl>
             </GridItem>
 

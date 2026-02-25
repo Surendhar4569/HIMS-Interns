@@ -1,8 +1,5 @@
 import pool from "../db.js";
 
-/**
- * Auto Generate Request Number (CR-2026-001 / AR-2026-001)
- */
 export const getNextRequestNumber = async (req, res) => {
   try {
     const result = await pool.query(
