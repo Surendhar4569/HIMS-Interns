@@ -5,7 +5,7 @@ const con=new Pool({
     user:"postgres",
     port:5432,
     password:process.env.password,
-    database:process.env.database
+    database:process.env.database_name
 
     
 })

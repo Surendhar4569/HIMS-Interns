@@ -1,25 +1,62 @@
 import express from "express"
 import con from "../db.js"
-export const  getfeedBack=async (req,res)=>{
-    try{
-    const get_query="SELECT * FROM patient_feedback"
-    const result=await con.query(get_query)
+
+export const getfeedBack = async (req, res) => {
+  try {
+
+    const query = `
+      SELECT 
+        pf.feedback_id,
+        pf.patient_id,
+        pf.patient_name,
+        pf.admission_id,
+        pf.service_type,
+        pf.rating AS overall_rating,
+        pf.feedback_comments,
+        pf.feedback_mode,
+        pf.consent_flag,
+        pf.created_date,
+
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'module_rating_id', fmr.module_rating_id,
+              'module_name', fmr.module_name,
+              'rating', fmr.rating,
+              'comment', fmr.comment
+            )
+          ) FILTER (WHERE fmr.module_rating_id IS NOT NULL),
+          '[]'
+        ) AS module_ratings
+
+      FROM patient_feedback pf
+      LEFT JOIN feedback_module_ratings fmr
+      ON pf.feedback_id = fmr.feedback_id
+
+      GROUP BY pf.feedback_id
+      ORDER BY pf.created_date DESC;
+    `;
+
+    const result = await con.query(query);
+
     return res.status(200).json({
-        sucess:true,
-        count:result.rows.length,
-        data:result.rows
-    })
+      success: true,
+      count: result.rows.length,
+      data: result.rows
+    });
 
-    }
-    catch(error){
-        console.log("error fetching",error.message)
-        return res.status(500).json({
-            sucess:false,
-            message:"internal server error"
-        })
+  } catch (error) {
 
-    }
-}
+    console.error("Fetch Error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+
+  }
+};
+
 
 
 
@@ -29,71 +66,107 @@ export const postFeedback = async (req, res) => {
   try {
     const {
       patient_id,
+      patient_name,
       admission_id,
       service_type,
       rating,
       feedback_comments,
       feedback_mode,
       consent_flag,
+      module_ratings
     } = req.body;
 
-    if (!patient_id || !service_type || !rating || !feedback_mode) {
+    if (
+      !patient_id ||
+      !patient_name ||
+      !service_type ||
+      !rating ||
+      !feedback_mode ||
+      !Array.isArray(module_ratings) ||
+      module_ratings.length === 0
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Required fields are missing",
+        message: "Required fields are missing"
       });
     }
 
     if (rating < 1 || rating > 5) {
       return res.status(400).json({
         success: false,
-        message: "Rating must be between 1 and 5",
+        message: "Overall rating must be between 1 and 5"
       });
+    }
+
+    for (const module of module_ratings) {
+      if (
+        !module.module_name ||
+        !module.rating ||
+        module.rating < 1 ||
+        module.rating > 5
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid module rating data"
+        });
+      }
     }
 
     await client.query("BEGIN");
 
-    const insertQuery = `
+    const insertFeedbackQuery = `
       INSERT INTO patient_feedback
-      (patient_id, admission_id, service_type, rating,
-       feedback_comments, feedback_mode, consent_flag, created_date)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
-      RETURNING *;
+      (patient_id, patient_name, admission_id, service_type,
+       rating, feedback_comments, feedback_mode, consent_flag)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      RETURNING feedback_id;
     `;
 
-    const result = await client.query(insertQuery, [ // FIXED
+    const feedbackResult = await client.query(insertFeedbackQuery, [
       patient_id,
+      patient_name,
       admission_id || null,
       service_type,
       rating,
       feedback_comments || null,
       feedback_mode,
-      consent_flag || false,
+      consent_flag === "Yes" ? true : false
     ]);
+
+    const feedback_id = feedbackResult.rows[0].feedback_id;
+
+    const insertModuleQuery = `
+      INSERT INTO feedback_module_ratings
+      (feedback_id, module_name, rating, comment)
+      VALUES ($1, $2, $3, $4);
+    `;
+
+    for (const module of module_ratings) {
+      await client.query(insertModuleQuery, [
+        feedback_id,
+        module.module_name,
+        module.rating,
+        module.comment || null
+      ]);
+    }
 
     await client.query("COMMIT");
 
     return res.status(201).json({
       success: true,
       message: "Feedback submitted successfully",
-      data: result.rows[0],
+      feedback_id
     });
 
   } catch (error) {
+
     await client.query("ROLLBACK");
 
-    if (error.code === "23505") {
-      return res.status(409).json({
-        success: false,
-        message: "Feedback already submitted",
-      });
-    }
-
-    console.error("Error inserting feedback:", error.message);
+    console.error("Insert Error:", error.message);
 
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: "Internal Server Error"
     });
 
   } finally {
@@ -103,19 +176,18 @@ export const postFeedback = async (req, res) => {
 
 
 
+
+
+
+
+
+
 export const updateFeedback = async (req, res) => {
+  const client = await con.connect();
+
   try {
     const { feedback_id } = req.params;
 
-    const {
-      service_type,
-      rating,
-      feedback_comments,
-      feedback_mode,
-      consent_flag
-    } = req.body;
-
-  
     if (isNaN(feedback_id)) {
       return res.status(400).json({
         success: false,
@@ -123,43 +195,36 @@ export const updateFeedback = async (req, res) => {
       });
     }
 
-  
-    const checkQuery = "SELECT * FROM patient_feedback WHERE feedback_id = $1";
-    const existing = await con.query(checkQuery, [feedback_id]);
+    const {
+      service_type,
+      rating,
+      feedback_comments,
+      feedback_mode,
+      consent_flag,
+      module_ratings
+    } = req.body;
+    await client.query("BEGIN");
+
+    const existing = await client.query(
+      "SELECT * FROM patient_feedback WHERE feedback_id = $1",
+      [feedback_id]
+    );
 
     if (existing.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({
         success: false,
         message: "Feedback not found"
       });
     }
 
- 
-
     if (rating !== undefined && (rating < 1 || rating > 5)) {
+      await client.query("ROLLBACK");
       return res.status(400).json({
         success: false,
-        message: "Rating must be between 1 and 5"
+        message: "Overall rating must be between 1 and 5"
       });
     }
-
-    const allowedServiceTypes = ["OPD", "IPD", "Diagnostic", "Pharmacy"];
-    if (service_type && !allowedServiceTypes.includes(service_type)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid service_type"
-      });
-    }
-
-    const allowedModes = ["Online", "Offline", "Kiosk", "App","source"];
-    if (feedback_mode && !allowedModes.includes(feedback_mode)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid feedback_mode"
-      });
-    }
-
-
 
     const updateQuery = `
       UPDATE patient_feedback
@@ -173,34 +238,89 @@ export const updateFeedback = async (req, res) => {
       RETURNING *;
     `;
 
-    const result = await con.query(updateQuery, [
+    const updatedParent = await client.query(updateQuery, [
       service_type || null,
       rating || null,
       feedback_comments || null,
       feedback_mode || null,
-      consent_flag,
+      consent_flag === "Yes" ? true : false,
       feedback_id
     ]);
+
+    if (Array.isArray(module_ratings)) {
+
+      for (const module of module_ratings) {
+        if (
+          !module.module_name ||
+          !module.rating ||
+          module.rating < 1 ||
+          module.rating > 5
+        ) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            success: false,
+            message: "Invalid module rating data"
+          });
+        }
+      }
+
+      await client.query(
+        "DELETE FROM feedback_module_ratings WHERE feedback_id = $1",
+        [feedback_id]
+      );
+
+      const insertModuleQuery = `
+        INSERT INTO feedback_module_ratings
+        (feedback_id, module_name, rating, comment)
+        VALUES ($1, $2, $3, $4);
+      `;
+
+      for (const module of module_ratings) {
+        await client.query(insertModuleQuery, [
+          feedback_id,
+          module.module_name,
+          module.rating,
+          module.comment || null
+        ]);
+      }
+    }
+
+    await client.query("COMMIT");
 
     return res.status(200).json({
       success: true,
       message: "Feedback updated successfully",
-      data: result.rows[0]
+      data: updatedParent.rows[0]
     });
 
   } catch (error) {
+
+    await client.query("ROLLBACK");
+
     console.error("Update Error:", error.message);
+
     return res.status(500).json({
       success: false,
       message: "Internal Server Error"
     });
+
+  } finally {
+    client.release();
   }
 };
 
 
 
 
+
+
+
+
+
+
 export const deleteFeedback = async (req, res) => {
+  const client = await con.connect();
+
   try {
     const { feedback_id } = req.params;
 
@@ -211,32 +331,45 @@ export const deleteFeedback = async (req, res) => {
       });
     }
 
-    const deleteQuery = `
-      DELETE FROM patient_feedback
-      WHERE feedback_id = $1
-      RETURNING *;
-    `;
+    await client.query("BEGIN");
 
-    const result = await con.query(deleteQuery, [feedback_id]);
+    const existing = await client.query(
+      "SELECT feedback_id FROM patient_feedback WHERE feedback_id = $1",
+      [feedback_id]
+    );
 
-    if (result.rows.length === 0) {
+    if (existing.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({
         success: false,
         message: "Feedback not found"
       });
     }
 
+    await client.query(
+      "DELETE FROM patient_feedback WHERE feedback_id = $1",
+      [feedback_id]
+    );
+
+    await client.query("COMMIT");
+
     return res.status(200).json({
       success: true,
-      message: "Feedback deleted successfully",
-      data: result.rows[0]
+      message: "Feedback deleted successfully"
     });
 
   } catch (error) {
+
+    await client.query("ROLLBACK");
+
     console.error("Delete Error:", error.message);
+
     return res.status(500).json({
       success: false,
       message: "Internal Server Error"
     });
+
+  } finally {
+    client.release();
   }
 };
