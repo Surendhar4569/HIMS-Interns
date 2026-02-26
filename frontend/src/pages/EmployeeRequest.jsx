@@ -39,7 +39,6 @@ function EmployeeRequest() {
     fetchNextRequestNumber();
   }, []);
 
-  // 🔹 Fetch next serial number from backend
   const fetchNextRequestNumber = async () => {
     try {
       const res = await fetch(
@@ -56,7 +55,6 @@ function EmployeeRequest() {
 
       setNextSequence(sequence);
 
-      // Default preview
       setFormData((prev) => ({
         ...prev,
         request_number: sequence,
@@ -66,7 +64,6 @@ function EmployeeRequest() {
     }
   };
 
-  // 🔹 FULL RESET FUNCTION (acts like page refresh without reload)
   const resetFormToDefault = (category = "") => {
     let previewNumber = nextSequence;
 
@@ -93,19 +90,16 @@ function EmployeeRequest() {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // File upload handling
     if (name === "attachment") {
       setFormData({ ...formData, attachment: e.target.files[0] });
       return;
     }
 
-    // 🔥 AUTO RESET WHEN SWITCHING CR ↔ AR (LIKE PAGE REFRESH)
     if (name === "request_category") {
       resetFormToDefault(value);
       return;
     }
 
-    // Normal field updates
     setFormData({
       ...formData,
       [name]: value,
@@ -124,7 +118,6 @@ function EmployeeRequest() {
     if (!formData.requirement_description)
       newErrors.requirement_description = "Description is required";
 
-    // Related Module required ONLY for CR
     if (
       formData.request_category === "CR" &&
       !formData.related_module
@@ -133,7 +126,6 @@ function EmployeeRequest() {
         "Related Module is required for Change Request";
     }
 
-    // Existing Feature Ref required ONLY for CR
     if (
       formData.request_category === "CR" &&
       !formData.existing_feature_ref
@@ -173,7 +165,6 @@ function EmployeeRequest() {
       );
 
       if (res.ok) {
-        // ✅ SUCCESS MESSAGE
         toast({
           title: "Request Submitted",
           description: "Request submitted successfully",
@@ -183,10 +174,7 @@ function EmployeeRequest() {
           position: "top-right",
         });
 
-        // 🔥 AUTO RESET FORM AFTER SUBMISSION (DEFAULT STATE)
         resetFormToDefault("");
-
-        // Fetch new serial number for next request
         fetchNextRequestNumber();
       } else {
         throw new Error("Failed");
@@ -208,15 +196,15 @@ function EmployeeRequest() {
   };
 
   return (
-    <Flex minH="100vh" align="center" justify="center" bg="gray.50" p={6}>
+    <Flex minH="100vh" align="center" justify="center" bg="gray.100" p={6}>
       <Box
-        maxW="900px"
+        ml={{ base: 0, md: "250px" }}
+        maxW="1000px"
         w="100%"
-        p={6}
-        borderWidth="1px"
-        borderRadius="lg"
-        boxShadow="lg"
         bg="white"
+        p={{ base: 6, md: 8 }}
+        borderRadius="lg"
+        boxShadow="xl"
       >
         <Heading size="lg" mb={2}>
           Request (Employee)
@@ -227,11 +215,17 @@ function EmployeeRequest() {
         </Text>
 
         <form onSubmit={handleSubmit}>
-          <Grid templateColumns="repeat(2, 1fr)" gap={6}>
+          <Grid
+            templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}
+            gap={6}
+          >
             <GridItem>
               <FormControl>
                 <FormLabel>Request Number</FormLabel>
-                <Input value={formData.request_number} isReadOnly />
+                <Input
+                  value={formData.request_number}
+                  isReadOnly
+                />
               </FormControl>
             </GridItem>
 
@@ -258,7 +252,7 @@ function EmployeeRequest() {
               </FormControl>
             </GridItem>
 
-            <GridItem colSpan={2}>
+            <GridItem colSpan={{ base: 1, md: 2 }}>
               <FormControl
                 isRequired
                 isInvalid={errors.request_title}
@@ -275,16 +269,13 @@ function EmployeeRequest() {
               </FormControl>
             </GridItem>
 
-            {/* Related Module - ONLY visible for CR */}
             {formData.request_category === "CR" && (
               <GridItem>
                 <FormControl
                   isRequired
                   isInvalid={errors.related_module}
                 >
-                  <FormLabel>
-                    Related Module
-                  </FormLabel>
+                  <FormLabel>Related Module</FormLabel>
                   <Select
                     name="related_module"
                     placeholder="Select Related Module"
@@ -300,7 +291,6 @@ function EmployeeRequest() {
               </GridItem>
             )}
 
-            {/* Existing Feature Ref - ONLY for CR */}
             {formData.request_category === "CR" && (
               <GridItem>
                 <FormControl
@@ -320,7 +310,7 @@ function EmployeeRequest() {
               </GridItem>
             )}
 
-            <GridItem colSpan={2}>
+            <GridItem colSpan={{ base: 1, md: 2 }}>
               <FormControl
                 isRequired
                 isInvalid={errors.requirement_description}
@@ -378,7 +368,6 @@ function EmployeeRequest() {
             mt={6}
             colorScheme="blue"
             type="submit"
-            width="220px"
             isLoading={loading}
           >
             Submit Request
