@@ -25,7 +25,7 @@ function EmployeeRequest() {
     request_category: "",
     request_title: "",
     requirement_description: "",
-    related_module: "Billing",
+    related_module: "",
     existing_feature_ref: "",
     priority: "",
     attachment: null,
@@ -39,67 +39,78 @@ function EmployeeRequest() {
     fetchNextRequestNumber();
   }, []);
 
+  // 🔹 Fetch next serial number from backend
   const fetchNextRequestNumber = async () => {
-  try {
-    const res = await fetch(
-      "http://localhost:3000/request/getNextRequestNumber"
-    );
+    try {
+      const res = await fetch(
+        "http://localhost:3000/request/getNextRequestNumber"
+      );
 
-    if (!res.ok) {
-      console.error("API Error:", res.status);
-      return;
+      if (!res.ok) {
+        console.error("API Error:", res.status);
+        return;
+      }
+
+      const data = await res.json();
+      const sequence = data.next_sequence || "001";
+
+      setNextSequence(sequence);
+
+      // Default preview
+      setFormData((prev) => ({
+        ...prev,
+        request_number: sequence,
+      }));
+    } catch (error) {
+      console.error("Fetch failed:", error);
     }
+  };
 
-    const data = await res.json();
+  // 🔹 FULL RESET FUNCTION (acts like page refresh without reload)
+  const resetFormToDefault = (category = "") => {
+    let previewNumber = nextSequence;
 
-    // Store next serial sequence from backend (001, 002, etc.)
-    const sequence = data.next_sequence || "001";
-    setNextSequence(sequence);
-
-    // Default preview before CR/AR selection
-    setFormData((prev) => ({
-      ...prev,
-      request_number: sequence,
-    }));
-  } catch (error) {
-    console.error("Fetch failed:", error);
-  }
-};
-
-  const handleChange = (e) => {
-  const { name, value } = e.target;
-
-  // File upload handling (unchanged)
-  if (name === "attachment") {
-    setFormData({ ...formData, attachment: e.target.files[0] });
-    return;
-  }
-
-  // 🔥 Dynamic Request Number Logic (CR / AR)
-  if (name === "request_category") {
-    let previewNumber = nextSequence; // default = 001
-
-    if (value === "CR") {
+    if (category === "CR") {
       previewNumber = `CR-${currentYear}-${nextSequence}`;
-    } else if (value === "AR") {
+    } else if (category === "AR") {
       previewNumber = `AR-${currentYear}-${nextSequence}`;
     }
 
     setFormData({
-      ...formData,
-      request_category: value,
       request_number: previewNumber,
+      request_category: category,
+      request_title: "",
+      requirement_description: "",
+      related_module: "",
+      existing_feature_ref: "",
+      priority: "",
+      attachment: null,
     });
 
-    return;
-  }
+    setErrors({});
+  };
 
-  // Normal field updates (title, description, priority, etc.)
-  setFormData({
-    ...formData,
-    [name]: value,
-  });
-};
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    // File upload handling
+    if (name === "attachment") {
+      setFormData({ ...formData, attachment: e.target.files[0] });
+      return;
+    }
+
+    // 🔥 AUTO RESET WHEN SWITCHING CR ↔ AR (LIKE PAGE REFRESH)
+    if (name === "request_category") {
+      resetFormToDefault(value);
+      return;
+    }
+
+    // Normal field updates
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
 
   const validate = () => {
     let newErrors = {};
@@ -113,12 +124,16 @@ function EmployeeRequest() {
     if (!formData.requirement_description)
       newErrors.requirement_description = "Description is required";
 
-    if (!formData.related_module)
-  newErrors.related_module = "Related Module is required";
+    // Related Module required ONLY for CR
+    if (
+      formData.request_category === "CR" &&
+      !formData.related_module
+    ) {
+      newErrors.related_module =
+        "Related Module is required for Change Request";
+    }
 
-    if (!formData.priority)
-      newErrors.priority = "Priority is required";
-
+    // Existing Feature Ref required ONLY for CR
     if (
       formData.request_category === "CR" &&
       !formData.existing_feature_ref
@@ -126,6 +141,9 @@ function EmployeeRequest() {
       newErrors.existing_feature_ref =
         "Existing Feature Reference is required for CR";
     }
+
+    if (!formData.priority)
+      newErrors.priority = "Priority is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -139,6 +157,7 @@ function EmployeeRequest() {
       setLoading(true);
 
       const formDataToSend = new FormData();
+
       Object.keys(formData).forEach((key) => {
         if (formData[key]) {
           formDataToSend.append(key, formData[key]);
@@ -154,29 +173,36 @@ function EmployeeRequest() {
       );
 
       if (res.ok) {
+        // ✅ SUCCESS MESSAGE
         toast({
           title: "Request Submitted",
-          description: "Employee request created successfully",
+          description: "Request submitted successfully",
           status: "success",
           duration: 3000,
           isClosable: true,
+          position: "top-right",
         });
 
-        window.location.reload();
+        // 🔥 AUTO RESET FORM AFTER SUBMISSION (DEFAULT STATE)
+        resetFormToDefault("");
+
+        // Fetch new serial number for next request
+        fetchNextRequestNumber();
       } else {
         throw new Error("Failed");
       }
     } catch (error) {
-  console.error("Request submission failed:", error);
+      console.error("API Error:", error);
 
-  toast({
-    title: "Server Error",
-    description: "Unable to submit request",
-    status: "error",
-    duration: 3000,
-    isClosable: true,
-  });
-} finally {
+      toast({
+        title: "Submission Failed",
+        description: "Unable to submit request",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+        position: "top-right",
+      });
+    } finally {
       setLoading(false);
     }
   };
@@ -218,10 +244,13 @@ function EmployeeRequest() {
                 <Select
                   name="request_category"
                   placeholder="Select CR / AR"
+                  value={formData.request_category}
                   onChange={handleChange}
                 >
                   <option value="CR">Change Request (CR)</option>
-                  <option value="AR">Additional Requirement (AR)</option>
+                  <option value="AR">
+                    Additional Requirement (AR)
+                  </option>
                 </Select>
                 <FormErrorMessage>
                   {errors.request_category}
@@ -237,6 +266,7 @@ function EmployeeRequest() {
                 <FormLabel>Request Title</FormLabel>
                 <Input
                   name="request_title"
+                  value={formData.request_title}
                   onChange={handleChange}
                 />
                 <FormErrorMessage>
@@ -245,32 +275,32 @@ function EmployeeRequest() {
               </FormControl>
             </GridItem>
 
-            <GridItem colSpan={2}>
-              <FormControl isRequired>
-                <FormLabel>Requirement Description</FormLabel>
-                  <Textarea
-                    name="requirement_description"
-                    placeholder="Describe the change request or additional requirement in detail"
-                    value={formData.requirement_description}
+            {/* Related Module - ONLY visible for CR */}
+            {formData.request_category === "CR" && (
+              <GridItem>
+                <FormControl
+                  isRequired
+                  isInvalid={errors.related_module}
+                >
+                  <FormLabel>
+                    Related Module
+                  </FormLabel>
+                  <Select
+                    name="related_module"
+                    placeholder="Select Related Module"
+                    value={formData.related_module}
                     onChange={handleChange}
-                    rows={4}
-                  />
+                  >
+                    <option value="Billing">Billing</option>
+                  </Select>
                   <FormErrorMessage>
-      {             errors.requirement_description}
+                    {errors.related_module}
                   </FormErrorMessage>
-              </FormControl>
-            </GridItem>
+                </FormControl>
+              </GridItem>
+            )}
 
-            <GridItem>
-              <FormControl isRequired isInvalid={errors.related_module}>
-                <FormLabel>Related Module</FormLabel>
-                <Select name="related_module" placeholder="Select Related Module" value={formData.related_module}  onChange={handleChange}>
-                <option value="Billing">Billing</option>
-                </Select>
-                <FormErrorMessage>{errors.related_module}</FormErrorMessage>
-              </FormControl>
-            </GridItem>
-
+            {/* Existing Feature Ref - ONLY for CR */}
             {formData.request_category === "CR" && (
               <GridItem>
                 <FormControl
@@ -280,6 +310,7 @@ function EmployeeRequest() {
                   <FormLabel>Existing Feature Ref</FormLabel>
                   <Input
                     name="existing_feature_ref"
+                    value={formData.existing_feature_ref}
                     onChange={handleChange}
                   />
                   <FormErrorMessage>
@@ -288,6 +319,25 @@ function EmployeeRequest() {
                 </FormControl>
               </GridItem>
             )}
+
+            <GridItem colSpan={2}>
+              <FormControl
+                isRequired
+                isInvalid={errors.requirement_description}
+              >
+                <FormLabel>Requirement Description</FormLabel>
+                <Textarea
+                  name="requirement_description"
+                  placeholder="Describe the change request or additional requirement in detail"
+                  value={formData.requirement_description}
+                  onChange={handleChange}
+                  rows={4}
+                />
+                <FormErrorMessage>
+                  {errors.requirement_description}
+                </FormErrorMessage>
+              </FormControl>
+            </GridItem>
 
             <GridItem>
               <FormControl
@@ -298,6 +348,7 @@ function EmployeeRequest() {
                 <Select
                   name="priority"
                   placeholder="Select Priority"
+                  value={formData.priority}
                   onChange={handleChange}
                 >
                   <option value="LOW">LOW</option>
