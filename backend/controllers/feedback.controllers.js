@@ -82,12 +82,11 @@ export const postFeedback = async (req, res) => {
       !service_type ||
       !rating ||
       !feedback_mode ||
-      !Array.isArray(module_ratings) ||
-      module_ratings.length === 0
+      !Array.isArray(module_ratings)
     ) {
       return res.status(400).json({
         success: false,
-        message: "Required fields are missing"
+        message: "Invalid module data"
       });
     }
 
@@ -97,6 +96,7 @@ export const postFeedback = async (req, res) => {
         message: "Overall rating must be between 1 and 5"
       });
     }
+
 
     for (const module of module_ratings) {
       if (
@@ -119,7 +119,7 @@ export const postFeedback = async (req, res) => {
       (patient_id, patient_name, admission_id, service_type,
        rating, feedback_comments, feedback_mode, consent_flag)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-      RETURNING feedback_id;
+      RETURNING *;
     `;
 
     const feedbackResult = await client.query(insertFeedbackQuery, [
@@ -130,7 +130,7 @@ export const postFeedback = async (req, res) => {
       rating,
       feedback_comments || null,
       feedback_mode,
-      consent_flag === "Yes" ? true : false
+      consent_flag
     ]);
 
     const feedback_id = feedbackResult.rows[0].feedback_id;
@@ -138,16 +138,21 @@ export const postFeedback = async (req, res) => {
     const insertModuleQuery = `
       INSERT INTO feedback_module_ratings
       (feedback_id, module_name, rating, comment)
-      VALUES ($1, $2, $3, $4);
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
     `;
 
+    const insertedModules = [];
+
     for (const module of module_ratings) {
-      await client.query(insertModuleQuery, [
+      const moduleResult = await client.query(insertModuleQuery, [
         feedback_id,
         module.module_name,
         module.rating,
         module.comment || null
       ]);
+
+      insertedModules.push(moduleResult.rows[0]);
     }
 
     await client.query("COMMIT");
@@ -155,8 +160,12 @@ export const postFeedback = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Feedback submitted successfully",
-      feedback_id
-    });
+      data: {
+        ...feedbackResult.rows[0],
+        overall_rating: feedbackResult.rows[0].rating,
+        module_ratings: insertedModules
+      }
+});
 
   } catch (error) {
 
@@ -307,6 +316,7 @@ export const updateFeedback = async (req, res) => {
   message: "Feedback updated successfully",
   data: {
     ...updatedParent.rows[0],
+    overall_rating: updatedParent.rows[0].rating,
     module_ratings: modules.rows
   }
 });
