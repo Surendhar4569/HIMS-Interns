@@ -169,7 +169,7 @@ export default function PatientComplaints() {
   };
 
   return (
-    <Box flex="1" display="flex" justifyContent="center" alignItems="center" py={10}>
+    <Box ml="250px" flex="1" display="flex" justifyContent="center" alignItems="center" py={10}>
       <Container maxW="5xl" bg="white" p={8} borderRadius="2xl" boxShadow="xl">
         <Box mb={8}>
           <Heading size="lg">Add New Complaint</Heading>
