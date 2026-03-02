@@ -7,6 +7,7 @@ import PatientFeedback from "./pages/patient_feedback";
 import PatientComplaints from "./pages/patient_complaints";
 import RegisterPatient from "./pages/registerPatient";
 import Employee from "./pages/employee";
+import EmployeeRequest from "./pages/EmployeeRequest";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/complaints" element={<PatientComplaints />} />
           <Route path="/registerPatient" element={<RegisterPatient />} />
           <Route path="/employee" element={<Employee />} />
+          <Route path="/request" element={<EmployeeRequest />} />
         </Routes>
       </Box>
     </Flex>
