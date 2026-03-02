@@ -82,12 +82,11 @@ export const postFeedback = async (req, res) => {
       !service_type ||
       !rating ||
       !feedback_mode ||
-      !Array.isArray(module_ratings) ||
-      module_ratings.length === 0
+      !Array.isArray(module_ratings)
     ) {
       return res.status(400).json({
         success: false,
-        message: "Required fields are missing"
+        message: "Invalid module data"
       });
     }
 
@@ -97,6 +96,7 @@ export const postFeedback = async (req, res) => {
         message: "Overall rating must be between 1 and 5"
       });
     }
+
 
     for (const module of module_ratings) {
       if (
@@ -119,7 +119,7 @@ export const postFeedback = async (req, res) => {
       (patient_id, patient_name, admission_id, service_type,
        rating, feedback_comments, feedback_mode, consent_flag)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-      RETURNING feedback_id;
+      RETURNING *;
     `;
 
     const feedbackResult = await client.query(insertFeedbackQuery, [
@@ -130,7 +130,7 @@ export const postFeedback = async (req, res) => {
       rating,
       feedback_comments || null,
       feedback_mode,
-      consent_flag === "Yes" ? true : false
+      consent_flag
     ]);
 
     const feedback_id = feedbackResult.rows[0].feedback_id;
@@ -138,16 +138,21 @@ export const postFeedback = async (req, res) => {
     const insertModuleQuery = `
       INSERT INTO feedback_module_ratings
       (feedback_id, module_name, rating, comment)
-      VALUES ($1, $2, $3, $4);
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
     `;
 
+    const insertedModules = [];
+
     for (const module of module_ratings) {
-      await client.query(insertModuleQuery, [
+      const moduleResult = await client.query(insertModuleQuery, [
         feedback_id,
         module.module_name,
         module.rating,
         module.comment || null
       ]);
+
+      insertedModules.push(moduleResult.rows[0]);
     }
 
     await client.query("COMMIT");
@@ -155,8 +160,12 @@ export const postFeedback = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Feedback submitted successfully",
-      feedback_id
-    });
+      data: {
+        ...feedbackResult.rows[0],
+        overall_rating: feedbackResult.rows[0].rating,
+        module_ratings: insertedModules
+      }
+});
 
   } catch (error) {
 
@@ -217,8 +226,8 @@ export const updateFeedback = async (req, res) => {
         message: "Feedback not found"
       });
     }
-
-    if (rating !== undefined && (rating < 1 || rating > 5)) {
+    const numericRating = rating !== undefined ? Number(rating) : undefined;
+    if (numericRating !== undefined && (numericRating < 1 || numericRating > 5)) {
       await client.query("ROLLBACK");
       return res.status(400).json({
         success: false,
@@ -229,32 +238,43 @@ export const updateFeedback = async (req, res) => {
     const updateQuery = `
       UPDATE patient_feedback
       SET 
-        service_type = COALESCE($1, service_type),
-        rating = COALESCE($2, rating),
-        feedback_comments = COALESCE($3, feedback_comments),
-        feedback_mode = COALESCE($4, feedback_mode),
-        consent_flag = COALESCE($5, consent_flag)
-      WHERE feedback_id = $6
+      patient_id = COALESCE($1, patient_id),
+      patient_name = COALESCE($2, patient_name),
+      admission_id = COALESCE($3, admission_id),
+      service_type = COALESCE($4, service_type),
+      rating = COALESCE($5, rating),
+      feedback_comments = COALESCE($6, feedback_comments),
+      feedback_mode = COALESCE($7, feedback_mode),
+      consent_flag = COALESCE($8, consent_flag)
+      WHERE feedback_id = $9
       RETURNING *;
     `;
 
     const updatedParent = await client.query(updateQuery, [
-      service_type || null,
-      rating || null,
-      feedback_comments || null,
-      feedback_mode || null,
-      consent_flag === "Yes" ? true : false,
-      feedback_id
+      
+        req.body.patient_id ?? null,
+        req.body.patient_name ?? null,
+        req.body.admission_id ?? null,
+        service_type ?? null,
+        numericRating ?? null,
+        feedback_comments ?? null,
+        feedback_mode ?? null,
+        consent_flag === undefined
+          ? null
+          : consent_flag === "Yes",
+        feedback_id
+
     ]);
 
     if (Array.isArray(module_ratings)) {
 
       for (const module of module_ratings) {
+        const moduleRating = Number(module.rating);
         if (
           !module.module_name ||
-          !module.rating ||
-          module.rating < 1 ||
-          module.rating > 5
+          !moduleRating ||
+          moduleRating < 1 ||
+          moduleRating > 5
         ) {
           await client.query("ROLLBACK");
           return res.status(400).json({
@@ -285,13 +305,21 @@ export const updateFeedback = async (req, res) => {
       }
     }
 
+    const modules = await client.query(
+  "SELECT module_name, rating, comment FROM feedback_module_ratings WHERE feedback_id = $1",
+  [feedback_id]
+);
     await client.query("COMMIT");
 
     return res.status(200).json({
-      success: true,
-      message: "Feedback updated successfully",
-      data: updatedParent.rows[0]
-    });
+  success: true,
+  message: "Feedback updated successfully",
+  data: {
+    ...updatedParent.rows[0],
+    overall_rating: updatedParent.rows[0].rating,
+    module_ratings: modules.rows
+  }
+});
 
   } catch (error) {
 
