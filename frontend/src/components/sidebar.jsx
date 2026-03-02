@@ -1,6 +1,6 @@
 import { Box, VStack, Button, Text } from "@chakra-ui/react"
 import { Link, useLocation } from "react-router-dom"
-import { FaHome, FaCommentDots, FaExclamationCircle } from "react-icons/fa"
+import { FaHome, FaCommentDots, FaExclamationCircle, FaUserPlus, FaUsers } from "react-icons/fa"
 
 function Sidebar() {
   const location = useLocation()
@@ -9,6 +9,8 @@ function Sidebar() {
     { name: "Home", path: "/", icon: FaHome },
     { name: "Patient Feedback", path: "/feedback", icon: FaCommentDots },
     { name: "Patient Complaints", path: "/complaints", icon: FaExclamationCircle },
+    { name : "Register Patient", path: "/registerPatient", icon: FaUserPlus},
+    { name : "Employee", path: "/employee", icon: FaUsers} 
   ]
 
   return (

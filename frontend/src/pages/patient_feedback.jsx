@@ -110,9 +110,13 @@ function PatientFeedback() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          feedback_mode: "Online"   // add this
+    })
       });
-
+      console.log(res);
+      
       if (res.ok) {
         toast({
           title: "Feedback Submitted",
