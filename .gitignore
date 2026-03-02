@@ -20,7 +20,7 @@ backend/.env
 backend/__pycache__/
 backend/*.pyc
 backend/.pytest_cache/
-
+backend/uploads/
 backend/bin/
 backend/obj/
 
