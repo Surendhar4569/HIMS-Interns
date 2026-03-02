@@ -77,7 +77,7 @@ function Sidebar() {
     { name: "Patient Feedback", path: "/feedback", icon: FaCommentDots },
     { name: "Patient Complaints", path: "/complaints", icon: FaExclamationCircle },
     { name : "Register Patient", path: "/registerPatient", icon: FaUserPlus},
-    { name : "Employee", path: "/employee", icon: FaUsers} 
+    { name : "Employee", path: "/employee", icon: FaUsers},
     { name: "Request (Employee)", path: "/request", icon: FaFileAlt },
   ]
 
