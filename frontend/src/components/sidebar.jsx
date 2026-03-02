@@ -1,15 +1,20 @@
-import { Box, VStack, Button, Text } from "@chakra-ui/react"
-import { Link, useLocation } from "react-router-dom"
-import { FaHome, FaCommentDots, FaExclamationCircle } from "react-icons/fa"
+import { Box, VStack, Button, Text } from "@chakra-ui/react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  FaHome,
+  FaCommentDots,
+  FaClipboardList,
+} from "react-icons/fa";
 
 function Sidebar() {
-  const location = useLocation()
+  const location = useLocation();
 
   const menuItems = [
     { name: "Home", path: "/", icon: FaHome },
     { name: "Patient Feedback", path: "/feedback", icon: FaCommentDots },
-    { name: "Patient Complaints", path: "/complaints", icon: FaExclamationCircle },
-  ]
+    { name: "Complaints", path: "/complaints", icon: FaClipboardList }, 
+    { name: "Complaint List", path: "/complaint_list", icon: FaClipboardList },
+  ];
 
   return (
     <Box
@@ -35,7 +40,9 @@ function Sidebar() {
       {/* Menu */}
       <VStack spacing={4} align="stretch">
         {menuItems.map((item) => {
-          const Icon = item.icon
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+
           return (
             <Button
               key={item.name}
@@ -43,18 +50,18 @@ function Sidebar() {
               to={item.path}
               leftIcon={<Icon />}
               justifyContent="flex-start"
-              variant={location.pathname === item.path ? "solid" : "ghost"}
+              variant={isActive ? "solid" : "ghost"}
               colorScheme="blue"
               size="md"
               borderRadius="lg"
             >
               {item.name}
             </Button>
-          )
+          );
         })}
       </VStack>
     </Box>
-  )
+  );
 }
 
-export default Sidebar
+export default Sidebar;

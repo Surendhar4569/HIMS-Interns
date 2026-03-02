@@ -1,27 +1,35 @@
-import express from "express"
-import "dotenv/config.js"
-import cors from "cors"
-import patient_feedback from "./routes/feedback.Routes.js"
+import express from "express";
+import "dotenv/config.js";
+import cors from "cors";
 
-import patient_complaints from "./routes/complaints.Routes.js"
+// Routes
+import patient_feedback from "./routes/feedback.Routes.js";
+import complaintRoutes from "./routes/complaint.Routes.js";
 
-import con from "./db.js"
+const app = express();
 
-const app=express()
 app.use(
   cors({
     origin: "http://localhost:5173",
-  }),
+  })
 );
-app.use(express.json())
 
+// To parse JSON bodies
+app.use(express.json());
+
+// Serve uploaded files
 app.use("/uploads", express.static("uploads"));
 
-const PORT=process.env.PORT || 3000
+// PORT
+const PORT = process.env.PORT || 3000;
 
+// ================= API ROUTES =================
+app.use("/api/feedback", patient_feedback);
+app.use("/api/complaint_master", complaintRoutes);
+app.use("/api/complaint_attachment", complaintRoutes);
+app.use("/api/complaint_list", complaintRoutes);
 
-app.use("/feedback",patient_feedback)
-app.use("/complaints",patient_complaints)
-app.listen(PORT,()=>{
-    console.log(`server is running on port ${PORT}`)
-})
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
