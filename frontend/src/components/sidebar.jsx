@@ -17,6 +17,10 @@ function Sidebar() {
     { name: "Patient Complaints", path: "/complaints", icon: FaExclamationCircle },
     { name: "Complaint List", path: "/complaint_list", icon: FaClipboardList },
     { name: "Request (Employee)", path: "/request", icon: FaFileAlt },
+    { name: "Employee Records", path: "/employee-records", icon: FaFileAlt },
+    { name: "patient register", path: "/patient-register", icon: FaFileAlt },
+
+
   ];
 
   return (

@@ -176,7 +176,7 @@ function RegisterPatient({ onSave }) {
 
       resetForm();
     } catch (err) {
-      toast({ title: "Operation Failed", status: "error" });
+      toast({ title: "Operation Failed", status: "error" ,description:err});
     } finally {
       setLoading(false);
     }
@@ -200,13 +200,13 @@ function RegisterPatient({ onSave }) {
       setPatients((prev) => prev.filter((p) => p.patient_id !== id));
       toast({ title: "Deleted Successfully", status: "success" });
     } catch (err) {
-      toast({ title: "Delete Failed", status: "error" });
+      toast({ title: "Delete Failed", status: "error",description:err });
     }
   };
 
   return (
     <Flex minH="100vh" align="center" justify="center" bg="gray.50" p={6}>
-      <Box maxW="1000px" w="100%" p={6} bg="white" boxShadow="lg" borderRadius="xl">
+      <Box  ml="260px" maxW="1000px" w="100%" p={6} bg="white" boxShadow="lg" borderRadius="xl">
         <Tabs index={tabIndex} onChange={(i) => setTabIndex(i)} variant="enclosed">
           <TabList>
             <Tab>Register Patient</Tab>

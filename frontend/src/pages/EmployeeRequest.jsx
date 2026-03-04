@@ -198,7 +198,7 @@ function EmployeeRequest() {
   return (
     <Flex minH="100vh" align="center" justify="center" bg="gray.100" p={6}>
       <Box
-        ml={{ base: 0, md: "250px" }}
+        ml={{ base: 0, ml: "250px" }}
         maxW="1000px"
         w="100%"
         bg="white"

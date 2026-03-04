@@ -28,6 +28,7 @@ function EmployeeRecords() {
   const toast = useToast();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     fetchEmployees();
   }, []);
 
@@ -69,7 +70,7 @@ function EmployeeRecords() {
   };
 
   return (
-    <Box p={8} bg="gray.50" minH="100vh">
+    <Box ml="260px" p={8} bg="gray.50" minH="100vh">
       <Heading size="lg" mb={6} textAlign="center">
         Employee Records
       </Heading>
