@@ -173,9 +173,3 @@ function PatientRecords() {
 }
 
 export default PatientRecords;
-
-
-
-
-
-

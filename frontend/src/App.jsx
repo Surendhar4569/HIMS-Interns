@@ -23,7 +23,7 @@ function App() {
           <Route path="/registerPatient" element={<RegisterPatient />} />
           <Route path="/employee" element={<Employee />} />
           <Route path="/request" element={<EmployeeRequest />} />
-        </Routes>
+          </Routes>
       </Box>
     </Flex>
   );

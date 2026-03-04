@@ -9,7 +9,9 @@ function Sidebar() {
     { name: "Patient Feedback", path: "/feedback", icon: FaCommentDots },
     { name: "Feedback List", path: "/feedback-list", icon: MdFeedback },
     { name: "Patient Complaints", path: "/complaints", icon: FaExclamationCircle },
-    { name: "Request (Employee)", path: "/request", icon: FaFileAlt }
+    { name: "Request (Employee)", path: "/request", icon: FaFileAlt },
+    { name: "Register Patient", path: "/registerPatient", icon: FaFileAlt },
+    { name: "Employee Management", path: "/employee", icon: FaFileAlt }
   ]
 
   return (
