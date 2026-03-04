@@ -1689,7 +1689,7 @@ function FeedbackForm() {
 
       <FormControl gridColumn="span 2">
         <FormLabel fontSize="xs" textTransform="uppercase" fontWeight="bold" color="gray.600" mb={2}>
-          Additional Observations
+          Additional Obṣservations
         </FormLabel>
         <Textarea
           bg="gray.50"
@@ -1702,7 +1702,6 @@ function FeedbackForm() {
         />
       </FormControl>
     </Grid>
-
     {/* Toggle Section */}
     <Box mt={10} p={5} borderRadius="xl" bg="teal.50" border="1px dashed" borderColor="teal.200">
       <Flex justify="space-between" align="center">
