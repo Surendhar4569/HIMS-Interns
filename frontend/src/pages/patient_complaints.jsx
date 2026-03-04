@@ -34,7 +34,6 @@ export default function PatientComplaints() {
 
   const [errors, setErrors] = useState({});
 
-  // 🔥 Handle Input Change with Validations
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -43,7 +42,6 @@ export default function PatientComplaints() {
       if (!/^\d*$/.test(value)) return;
     }
 
-    // 🚫 Prevent numbers & special chars in patient_name
     if (name === "patient_name") {
       if (!/^[A-Za-z\s]*$/.test(value)) return;
     }
@@ -169,7 +167,7 @@ export default function PatientComplaints() {
   };
 
   return (
-    <Box ml="250px" flex="1" display="flex" justifyContent="center" alignItems="center" py={10}>
+    <Box flex="1" display="flex" justifyContent="center" alignItems="center" py={10}>
       <Container maxW="5xl" bg="white" p={8} borderRadius="2xl" boxShadow="xl">
         <Box mb={8}>
           <Heading size="lg">Add New Complaint</Heading>

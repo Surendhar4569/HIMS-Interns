@@ -28,8 +28,10 @@ import { AnimatePresence, motion } from "framer-motion";
 export default function ComplaintList() {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isAssignOpen, onOpen: onAssignOpen, onClose: onAssignClose } = useDisclosure();
   const [previewFile, setPreviewFile] = useState("");
 
+  const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [complaints, setComplaints] = useState([]);
   const [filtered, setFiltered] = useState([]);
 
@@ -122,13 +124,18 @@ export default function ComplaintList() {
     }
   };
 
+  const handleAssignClick = (complaint) => {
+    setSelectedComplaint(complaint);
+    onAssignOpen();
+  };
+
   const openCount = complaints.filter((c) => c.status === "OPEN").length;
   const progressCount = complaints.filter((c) => c.status === "IN_PROGRESS").length;
   const resolvedCount = complaints.filter((c) => c.status === "RESOLVED").length;
   const totalCount = complaints.length || 1;
 
   return (
-    <Box ml="260px"bg="gray.50" minH="100vh">
+    <Box bg="gray.50" minH="100vh">
       <Box p={6}>
         {/* Header */}
         <Box mb={6} textAlign="center">
@@ -219,10 +226,11 @@ export default function ComplaintList() {
               boxShadow="sm"
               focusBorderColor="blue.400"
             >
-              <option value="HR">HR</option>
               <option value="IT">IT</option>
-              <option value="SALES">SALES</option>
-              <option value="SUPPORT">SUPPORT</option>
+              <option value="Billing">Billing</option>
+              <option value="Administration">Administration</option>
+              <option value="Pharmacy">Pharmacy</option>
+              <option value="Laboratory">Laboratory</option>
             </Select>
             <Button
               size="sm"
@@ -269,7 +277,7 @@ export default function ComplaintList() {
             >
               <Box bg="white" borderRadius="xl" boxShadow="sm" overflow="hidden">
                 <Grid
-                  templateColumns="0.5fr 2fr 2fr 1fr 1fr 1fr 1fr 1fr"
+                  templateColumns="0.5fr 1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr"
                   columnGap={4}
                   p={3}
                   fontWeight="bold"
@@ -283,12 +291,13 @@ export default function ComplaintList() {
                   <Text>Priority</Text>
                   <Text>Status</Text>
                   <Text>Attachment</Text>
+                  <Text>Assign</Text>
                 </Grid>
 
                 {paginatedData.map((c, idx) => (
                   <Grid
                     key={c.complaint_id}
-                    templateColumns="0.5fr 2fr 2fr 1fr 1fr 1fr 1fr 1fr"
+                    templateColumns="0.5fr 1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr"
                     columnGap={3}
                     p={2}
                     bg={idx % 2 === 0 ? "white" : "gray.50"}
@@ -323,6 +332,13 @@ export default function ComplaintList() {
                       isDisabled={!c.attachment_path && !c.file_name}
                     >
                       View
+                    </Button>
+                    <Button
+                      size="xs"
+                      colorScheme="purple"
+                      onClick={() => handleAssignClick(c)}
+                    >
+                      Assign To
                     </Button>
                   </Grid>
                 ))}
@@ -407,6 +423,15 @@ export default function ComplaintList() {
                         >
                           View Attachment
                         </Button>
+                        <Button
+                          size="sm"
+                          colorScheme="purple"
+                          w="100%"
+                          mt={2}
+                          onClick={() => handleAssignClick(c)}
+                        >
+                          Assign To
+                        </Button>
                       </VStack>
                     </Box>
                   );
@@ -444,6 +469,35 @@ export default function ComplaintList() {
                 <Button leftIcon={<DownloadIcon />} colorScheme="green" onClick={() => downloadAttachment(previewFile)}>Download</Button>
               </HStack>
             </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* Assign Employee Modal */}
+      <Modal isOpen={isAssignOpen} onClose={onAssignClose} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Assign Employee</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            {selectedComplaint && (
+              <VStack align="stretch" spacing={4}>
+                <Box>
+                  <Text fontWeight="bold" color="gray.600">Ticket:</Text>
+                  <Text>{selectedComplaint.ticket_number}</Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="bold" color="gray.600">Raised By:</Text>
+                  <Text>{selectedComplaint.raised_by_name}</Text>
+                </Box>
+                <Box p={4} bg="gray.50" borderRadius="md" border="1px dashed" borderColor="gray.300">
+                  <Text color="gray.500" textAlign="center">Employee details will be shown here</Text>
+                </Box>
+                <Button colorScheme="purple" onClick={onAssignClose}>
+                  Confirm Assignment
+                </Button>
+              </VStack>
+            )}
           </ModalBody>
         </ModalContent>
       </Modal>
