@@ -3,3 +3,4 @@ npm i express
 npm i pg
 npm i cors
 npm i dotenv
+npm i multer

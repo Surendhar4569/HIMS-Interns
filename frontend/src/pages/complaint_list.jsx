@@ -128,7 +128,7 @@ export default function ComplaintList() {
   const totalCount = complaints.length || 1;
 
   return (
-    <Box bg="gray.50" minH="100vh">
+    <Box ml="260px"bg="gray.50" minH="100vh">
       <Box p={6}>
         {/* Header */}
         <Box mb={6} textAlign="center">
