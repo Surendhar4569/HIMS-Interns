@@ -2,26 +2,30 @@ import { Box, Flex } from "@chakra-ui/react";
 import { Routes, Route } from "react-router-dom";
 
 import Sidebar from "./components/sidebar";
+
+// Home
 import Home from "./pages/home";
 
-import Complaints from "./pages/complaints";
-import ComplaintList from "./pages/complaint_list";
-import PatientComplaints from "./pages/patient_complaints";
-
-import RegisterPatient from "./pages/registerPatient";
-import Employee from "./pages/employee";
-import EmployeeRequest from "./pages/EmployeeRequest";
-
+// Feedback
 import FeedbackForm from "./pages/FeedbackForm";
 import FeedbackList from "./pages/FeedbackList";
+
+// Complaints
+import Complaints from "./pages/complaints";
+import ComplaintList from "./pages/complaint_list";
+
+// Employees
+import EmployeeRecords from "./pages/employeeRecords";
+import EmployeeRequest from "./pages/EmployeeRequest";
 
 function App() {
   return (
     <Flex>
       <Sidebar />
 
-      <Box flex="1" p={5}>
+      <Box flex="1" p={5} ml="260px">
         <Routes>
+          {/* Home */}
           <Route path="/" element={<Home />} />
 
           {/* Feedback */}
@@ -31,12 +35,10 @@ function App() {
           {/* Complaints */}
           <Route path="/complaints" element={<Complaints />} />
           <Route path="/complaint_list" element={<ComplaintList />} />
-          <Route path="/patient_complaints" element={<PatientComplaints />} />
 
-          {/* Other Pages */}
-          <Route path="/registerPatient" element={<RegisterPatient />} />
-          <Route path="/employee" element={<Employee />} />
-          <Route path="/request" element={<EmployeeRequest />} />
+          {/* Employees */}
+          <Route path="/employee-records" element={<EmployeeRecords />} />
+          <Route path="/employee-request" element={<EmployeeRequest />} />
         </Routes>
       </Box>
     </Flex>
