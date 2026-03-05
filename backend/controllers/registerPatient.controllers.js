@@ -1,30 +1,35 @@
 import con from "../db.js";
 
+/* ===============================
+   GET ALL PATIENTS
+================================ */
 export const getPatients = async (req, res) => {
   try {
-    const result = await con.query(
-      `SELECT 
-    patient_id,
-    patient_name,
-    email,
-    gender,
-    TO_CHAR(dob, 'YYYY-MM-DD') AS dob,
-    blood_group,
-    contact_number,
-    address,
-    emergency_name,
-    emergency_contact_number,
-    created_at
-   FROM patient
-   ORDER BY patient_id DESC`,
-    );
+    const result = await con.query(`
+      SELECT
+        patient_id,
+        patient_name,
+        email,
+        gender,
+        TO_CHAR(dob, 'YYYY-MM-DD') AS dob,
+        blood_group,
+        contact_number,
+        address,
+        emergency_name,
+        emergency_contact_number,
+        created_at
+      FROM patient
+      ORDER BY patient_id DESC
+    `);
+
     return res.status(200).json({
       success: true,
       count: result.rows.length,
       data: result.rows,
     });
+
   } catch (error) {
-    console.error("Get Patients Error:", error.message);
+    console.error("Get Patients Error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -32,6 +37,10 @@ export const getPatients = async (req, res) => {
   }
 };
 
+
+/* ===============================
+   REGISTER PATIENT
+================================ */
 export const registerPatient = async (req, res) => {
   try {
     const {
@@ -45,9 +54,14 @@ export const registerPatient = async (req, res) => {
       emergency_name,
       emergency_contact_number,
     } = req.body;
-    console.log(req.body);
 
-    if (!patient_name || !email || !gender || !dob || !contact_number) {
+    // Basic validation
+    if (!patient_name?.trim() ||
+        !email?.trim() ||
+        !gender?.trim() ||
+        !dob ||
+        !contact_number?.trim()) {
+
       return res.status(400).json({
         success: false,
         message: "Required fields are missing",
@@ -58,32 +72,40 @@ export const registerPatient = async (req, res) => {
       INSERT INTO patient
       (patient_name, email, gender, dob, blood_group,
        contact_number, address,
-       emergency_name, emergency_contact_number, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
+       emergency_name, emergency_contact_number)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
       RETURNING *;
     `;
 
     const result = await con.query(query, [
-      patient_name,
-      email,
-      gender,
+      patient_name.trim(),
+      email.trim(),
+      gender.trim(),
       dob,
-      blood_group || null,
-      contact_number,
-      address || null,
-      emergency_name || null,
-      emergency_contact_number || null,
+      blood_group ?? null,
+      contact_number.trim(),
+      address ?? null,
+      emergency_name ?? null,
+      emergency_contact_number ?? null,
     ]);
-    console.log("BODY:", req.body);
-    console.log("INSERT RESULT:", result.rows);
 
     return res.status(201).json({
       success: true,
       message: "Patient registered successfully",
       data: result.rows[0],
     });
+
   } catch (error) {
-    console.error(error.message);
+
+    // Handle duplicate email (PostgreSQL unique violation)
+    if (error.code === "23505") {
+      return res.status(409).json({
+        success: false,
+        message: "Email already exists",
+      });
+    }
+
+    console.error("Register Error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -91,9 +113,20 @@ export const registerPatient = async (req, res) => {
   }
 };
 
+
+/* ===============================
+   UPDATE PATIENT
+================================ */
 export const updatePatient = async (req, res) => {
   try {
     const { patient_id } = req.params;
+
+    if (isNaN(patient_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid patient ID",
+      });
+    }
 
     const {
       patient_name,
@@ -124,15 +157,15 @@ export const updatePatient = async (req, res) => {
     `;
 
     const result = await con.query(query, [
-      patient_name || null,
-      email || null,
-      gender || null,
-      dob || null,
-      blood_group || null,
-      contact_number || null,
-      address || null,
-      emergency_name || null,
-      emergency_contact_number || null,
+      patient_name ?? null,
+      email ?? null,
+      gender ?? null,
+      dob ?? null,
+      blood_group ?? null,
+      contact_number ?? null,
+      address ?? null,
+      emergency_name ?? null,
+      emergency_contact_number ?? null,
       patient_id,
     ]);
 
@@ -148,22 +181,34 @@ export const updatePatient = async (req, res) => {
       message: "Patient updated successfully",
       data: result.rows[0],
     });
+
   } catch (error) {
-    console.error("Update Error FULL:", error);
+    console.error("Update Error:", error);
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Internal Server Error",
     });
   }
 };
 
+
+/* ===============================
+   DELETE PATIENT
+================================ */
 export const deletePatient = async (req, res) => {
   try {
     const { patient_id } = req.params;
 
+    if (isNaN(patient_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid patient ID",
+      });
+    }
+
     const result = await con.query(
       "DELETE FROM patient WHERE patient_id = $1 RETURNING *",
-      [patient_id],
+      [patient_id]
     );
 
     if (result.rows.length === 0) {
@@ -177,8 +222,9 @@ export const deletePatient = async (req, res) => {
       success: true,
       message: "Patient deleted successfully",
     });
+
   } catch (error) {
-    console.error("Delete Error:", error.message);
+    console.error("Delete Error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",

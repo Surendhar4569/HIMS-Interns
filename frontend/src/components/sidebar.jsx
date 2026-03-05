@@ -29,7 +29,12 @@ function Sidebar() {
     { name: "Employee Request", path: "/employee-request", icon: FaFileAlt },
 
     // Patients
-    { name: "Patient Records", path: "/patient-records", icon: FaUserInjured }
+    { name: "Patient Records", path: "/patient-records", icon: FaUserInjured },
+    { name: "Request (Employee)", path: "/request", icon: FaFileAlt },
+    { name: "Employee Records", path: "/employee-records", icon: FaFileAlt },
+    { name: "patient register", path: "/patient-register", icon: FaFileAlt },
+
+
   ];
 
   return (
