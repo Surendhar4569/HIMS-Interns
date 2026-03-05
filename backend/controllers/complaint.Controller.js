@@ -257,6 +257,7 @@ export const getComplaintList = async (req, res) => {
 		const query = `
 			SELECT 
 				cm.complaint_id,
+				-- cm.employee_id,
 				cm.ticket_number,
 				cm.raised_by_type,
 				cm.raised_by_name,
@@ -324,4 +325,3 @@ export const updateComplaintStatus = async (req, res) => {
 		return res.status(500).json({ success: false, message: "Internal Server Error" });
 	}
 };
-

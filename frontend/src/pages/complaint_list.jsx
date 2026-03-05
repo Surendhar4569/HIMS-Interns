@@ -112,13 +112,15 @@ export default function ComplaintList() {
     }
 
     const term = searchTerm.trim().toLowerCase();
+
+    // If both filters are empty, show no results to avoid loading the full list by default.
     if (!term && !assignDeptFilter) {
       setSearchResults([]);
       return;
     }
 
     const results = allEmployees.filter((emp) => {
-      const matchesTerm = emp.employee_name?.toLowerCase().includes(term) || emp.employee_id?.toString().includes(term);
+      const matchesTerm = !term || emp.employee_name?.toLowerCase().includes(term) || emp.employee_id?.toString().includes(term);
       const matchesDept = assignDeptFilter ? emp.department === assignDeptFilter : true;
       return matchesTerm && matchesDept;
     });
@@ -197,22 +199,36 @@ export default function ComplaintList() {
   };
 
   const handleUpdate = async () => {
+    if (!selectedEmployeeId) {
+      toast({
+        title: "No Employee Selected",
+        description: "Please search and select an employee to assign.",
+        status: "warning",
+        duration: 3000,
+      });
+      return;
+    }
+
     setIsAssigning(true);
     try {
-      const isUnassigning = !selectedEmployeeId;
-      const status = isUnassigning ? "OPEN" : "ASSIGNED";
-
+      console.log("Updating complaint:", selectedComplaint.complaint_id, "Employee:", selectedEmployeeId);
       const response = await fetch(
-        `http://localhost:3000/api/complaint_list/assignComplaint/${selectedComplaint.complaint_id}`,
+        `http://localhost:3000/api/complaint_list/assign/${encodeURIComponent(selectedComplaint.complaint_id)}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            employee_id: selectedEmployeeId,
-            status: status,
+            employee_id: parseInt(selectedEmployeeId, 10),
+            status: "ASSIGNED",
           }),
         }
       );
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Server Error:", response.status, text);
+        throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`);
+      }
 
       const result = await response.json();
 
@@ -224,6 +240,7 @@ export default function ComplaintList() {
         throw new Error(result.message || "Failed to update complaint");
       }
     } catch (error) {
+      console.error("Update Error:", error);
       toast({
         title: "Update Failed",
         description: error.message,
@@ -235,9 +252,50 @@ export default function ComplaintList() {
     }
   };
 
-  const handleDiscardChanges = () => {
-    setSelectedEmployeeId(originalEmployeeId);
-    toast({ title: "Changes Discarded", status: "info", duration: 1000 });
+  const handleUnassign = async () => {
+    if (!window.confirm("Are you sure you want to unassign this complaint?")) return;
+
+    setIsAssigning(true);
+    try {
+      console.log("Unassigning complaint:", selectedComplaint.complaint_id);
+      const response = await fetch(
+        `http://localhost:3000/api/complaint_list/assign/${encodeURIComponent(selectedComplaint.complaint_id)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            employee_id: null,
+            status: "OPEN",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Server Error:", response.status, text);
+        throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`);
+      }
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast({ title: "Unassigned Successfully", status: "success", duration: 2000 });
+        onAssignClose();
+        fetchComplaints();
+      } else {
+        throw new Error(result.message || "Failed to unassign complaint");
+      }
+    } catch (error) {
+      console.error("Unassign Error:", error);
+      toast({
+        title: "Unassign Failed",
+        description: error.message,
+        status: "error",
+        duration: 3000,
+      });
+    } finally {
+      setIsAssigning(false);
+    }
   };
 
   const openCount = complaints.filter((c) => c.status?.toUpperCase() === "OPEN").length;
@@ -246,7 +304,7 @@ export default function ComplaintList() {
   const totalCount = complaints.length || 1;
 
   // Helper to get display data for selected employee
-  const displayEmployee = selectedEmployeeData || searchResults.find(e => e.employee_id.toString() === selectedEmployeeId);
+  const displayEmployee = selectedEmployeeData || allEmployees.find(e => e.employee_id.toString() === selectedEmployeeId);
 
   return (
     <Box bg="gray.50" minH="100vh">
@@ -637,13 +695,19 @@ export default function ComplaintList() {
                     <Input
                       placeholder="Search employee by name or ID..."
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        if (selectedEmployeeId) {
+                          setSelectedEmployeeId(null);
+                          setSelectedEmployeeData(null);
+                        }
+                      }}
                       focusBorderColor="purple.400"
                     />
                   </InputGroup>
 
                   {/* Search Results Dropdown */}
-                  {(searchResults.length > 0 || searchTerm || assignDeptFilter) && (
+                  {!selectedEmployeeId && (searchResults.length > 0 || searchTerm || assignDeptFilter) && (
                     <List
                       position="absolute"
                       top="100%"
@@ -722,8 +786,8 @@ export default function ComplaintList() {
 
           <ModalFooter bg="gray.50" borderBottomRadius="md">
             <Flex w="full" justify="space-between">
-              <Button colorScheme="red" variant="ghost" leftIcon={<DeleteIcon />} onClick={handleDiscardChanges} isDisabled={isAssigning}>
-                Discard Changes
+              <Button colorScheme="red" variant="ghost" leftIcon={<DeleteIcon />} onClick={handleUnassign} isDisabled={isAssigning}>
+                Unassign
               </Button>
               <HStack spacing={3}>
                 <Button variant="outline" onClick={onAssignClose}>Cancel</Button>
