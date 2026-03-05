@@ -131,7 +131,7 @@ export default function Complaints() {
   };
 
   return (
-    <Box ml="260px" bg="gray.50" minH="100vh" py={4}>
+    <Box bg="gray.50" minH="100vh" py={4}>
       <Container maxW="5xl">
         {/* Header */}
         <Box textAlign="center" mb={2}>

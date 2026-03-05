@@ -51,7 +51,7 @@ function Employee() {
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch("http://localhost:3000/employee/getEmployees");
+     const res = await fetch("http://localhost:3000/api/employee/getEmployees");
       const result = await res.json();
       setEmployees(result.data || []);
     } catch (err) {
@@ -142,8 +142,8 @@ function Employee() {
     if (!validate()) return;
 
     const url = editId
-      ? `http://localhost:3000/employee/updateEmployee/${editId}`
-      : "http://localhost:3000/employee/registerEmployee";
+  ? `http://localhost:3000/api/employee/updateEmployee/${editId}`
+  : "http://localhost:3000/api/employee/registerEmployee";
 
     const method = editId ? "PUT" : "POST";
 
@@ -196,7 +196,7 @@ function Employee() {
     if (!window.confirm("Delete this record?")) return;
 
     try {
-      await fetch(`http://localhost:3000/employee/deleteEmployee/${id}`, {
+      await fetch(`http://localhost:3000/api/employee/deleteEmployee/${id}`, {
         method: "DELETE",
       });
 

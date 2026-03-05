@@ -20,24 +20,49 @@ import {
   ModalCloseButton,
   ModalBody,
   Image,
+  RadioGroup,
+  Radio,
   useDisclosure,
+  InputGroup,
+  InputLeftElement,
+  List,
+  ListItem,
+  Spinner,
+  ModalFooter,
+  Avatar,
+  IconButton,
 } from "@chakra-ui/react";
-import { DownloadIcon, RepeatIcon } from "@chakra-ui/icons";
+import { DownloadIcon, RepeatIcon, ChevronLeftIcon, ChevronRightIcon, DeleteIcon, SearchIcon } from "@chakra-ui/icons";
 import { AnimatePresence, motion } from "framer-motion";
 
 export default function ComplaintList() {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isAssignOpen, onOpen: onAssignOpen, onClose: onAssignClose } = useDisclosure();
   const [previewFile, setPreviewFile] = useState("");
 
+  const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [complaints, setComplaints] = useState([]);
   const [filtered, setFiltered] = useState([]);
+
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [originalEmployeeId, setOriginalEmployeeId] = useState(null);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [assignDeptFilter, setAssignDeptFilter] = useState("");
+  
+  // Search States
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearchingEmployees, setIsSearchingEmployees] = useState(false);
+  const [allEmployees, setAllEmployees] = useState([]);
+  const [selectedEmployeeData, setSelectedEmployeeData] = useState(null);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
   const [raisedByType, setRaisedByType] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
+  const [deptOptions, setDeptOptions] = useState([]);
 
   const [view, setView] = useState("list");
   const [page, setPage] = useState(1);
@@ -60,9 +85,48 @@ export default function ComplaintList() {
     }
   };
 
+  const fetchEmployeesData = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/employee/getEmployees");
+      const data = await res.json();
+      if (data.success) {
+        setAllEmployees(data.data || []);
+        const unique = [...new Set(data.data.map((e) => e.department).filter(Boolean))];
+        setDeptOptions(unique);
+      }
+    } catch (err) {
+      console.error("Failed to fetch departments", err);
+    }
+  };
+
   useEffect(() => {
     fetchComplaints();
+    fetchEmployeesData();
   }, []);
+
+  // Client-side Employee Search
+  useEffect(() => {
+    if (!isAssignOpen) {
+      setSearchResults([]);
+      return;
+    }
+
+    const term = searchTerm.trim().toLowerCase();
+
+    // If both filters are empty, show no results to avoid loading the full list by default.
+    if (!term && !assignDeptFilter) {
+      setSearchResults([]);
+      return;
+    }
+
+    const results = allEmployees.filter((emp) => {
+      const matchesTerm = !term || emp.employee_name?.toLowerCase().includes(term) || emp.employee_id?.toString().includes(term);
+      const matchesDept = assignDeptFilter ? emp.department === assignDeptFilter : true;
+      return matchesTerm && matchesDept;
+    });
+
+    setSearchResults(results.slice(0, 15));
+  }, [searchTerm, assignDeptFilter, isAssignOpen, allEmployees]);
 
   useEffect(() => {
     let temp = [...complaints];
@@ -122,13 +186,128 @@ export default function ComplaintList() {
     }
   };
 
-  const openCount = complaints.filter((c) => c.status === "OPEN").length;
-  const progressCount = complaints.filter((c) => c.status === "IN_PROGRESS").length;
-  const resolvedCount = complaints.filter((c) => c.status === "RESOLVED").length;
+  const handleAssignClick = (complaint) => {
+    setSelectedComplaint(complaint);
+    const empId = complaint.employee_id ? complaint.employee_id.toString() : null;
+    setSelectedEmployeeId(empId);
+    setOriginalEmployeeId(empId);
+    setAssignDeptFilter("");
+    setSearchTerm("");
+    setSearchResults([]);
+    setSelectedEmployeeData(null); // Reset detailed data, will rely on ID or search selection
+    onAssignOpen();
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedEmployeeId) {
+      toast({
+        title: "No Employee Selected",
+        description: "Please search and select an employee to assign.",
+        status: "warning",
+        duration: 3000,
+      });
+      return;
+    }
+
+    setIsAssigning(true);
+    try {
+      console.log("Updating complaint:", selectedComplaint.complaint_id, "Employee:", selectedEmployeeId);
+      const response = await fetch(
+        `http://localhost:3000/api/complaint_list/assign/${encodeURIComponent(selectedComplaint.complaint_id)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            employee_id: parseInt(selectedEmployeeId, 10),
+            status: "ASSIGNED",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Server Error:", response.status, text);
+        throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`);
+      }
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast({ title: "Updated Successfully", status: "success", duration: 2000 });
+        onAssignClose();
+        fetchComplaints(); // Refresh the list
+      } else {
+        throw new Error(result.message || "Failed to update complaint");
+      }
+    } catch (error) {
+      console.error("Update Error:", error);
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        status: "error",
+        duration: 3000,
+      });
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const handleUnassign = async () => {
+    if (!window.confirm("Are you sure you want to unassign this complaint?")) return;
+
+    setIsAssigning(true);
+    try {
+      console.log("Unassigning complaint:", selectedComplaint.complaint_id);
+      const response = await fetch(
+        `http://localhost:3000/api/complaint_list/assign/${encodeURIComponent(selectedComplaint.complaint_id)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            employee_id: null,
+            status: "OPEN",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Server Error:", response.status, text);
+        throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`);
+      }
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast({ title: "Unassigned Successfully", status: "success", duration: 2000 });
+        onAssignClose();
+        fetchComplaints();
+      } else {
+        throw new Error(result.message || "Failed to unassign complaint");
+      }
+    } catch (error) {
+      console.error("Unassign Error:", error);
+      toast({
+        title: "Unassign Failed",
+        description: error.message,
+        status: "error",
+        duration: 3000,
+      });
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const openCount = complaints.filter((c) => c.status?.toUpperCase() === "OPEN").length;
+  const progressCount = complaints.filter((c) => c.status?.toUpperCase() === "IN_PROGRESS").length;
+  const resolvedCount = complaints.filter((c) => c.status?.toUpperCase() === "RESOLVED").length;
   const totalCount = complaints.length || 1;
 
+  // Helper to get display data for selected employee
+  const displayEmployee = selectedEmployeeData || allEmployees.find(e => e.employee_id.toString() === selectedEmployeeId);
+
   return (
-    <Box ml="260px"bg="gray.50" minH="100vh">
+    <Box bg="gray.50" minH="100vh">
       <Box p={6}>
         {/* Header */}
         <Box mb={6} textAlign="center">
@@ -219,10 +398,9 @@ export default function ComplaintList() {
               boxShadow="sm"
               focusBorderColor="blue.400"
             >
-              <option value="HR">HR</option>
-              <option value="IT">IT</option>
-              <option value="SALES">SALES</option>
-              <option value="SUPPORT">SUPPORT</option>
+              {deptOptions.map((dept) => (
+                <option key={dept} value={dept}>{dept}</option>
+              ))}
             </Select>
             <Button
               size="sm"
@@ -269,7 +447,7 @@ export default function ComplaintList() {
             >
               <Box bg="white" borderRadius="xl" boxShadow="sm" overflow="hidden">
                 <Grid
-                  templateColumns="0.5fr 2fr 2fr 1fr 1fr 1fr 1fr 1fr"
+                  templateColumns="0.5fr 1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr"
                   columnGap={4}
                   p={3}
                   fontWeight="bold"
@@ -283,12 +461,13 @@ export default function ComplaintList() {
                   <Text>Priority</Text>
                   <Text>Status</Text>
                   <Text>Attachment</Text>
+                  <Text>Assign</Text>
                 </Grid>
 
                 {paginatedData.map((c, idx) => (
                   <Grid
                     key={c.complaint_id}
-                    templateColumns="0.5fr 2fr 2fr 1fr 1fr 1fr 1fr 1fr"
+                    templateColumns="0.5fr 1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr"
                     columnGap={3}
                     p={2}
                     bg={idx % 2 === 0 ? "white" : "gray.50"}
@@ -323,6 +502,13 @@ export default function ComplaintList() {
                       isDisabled={!c.attachment_path && !c.file_name}
                     >
                       View
+                    </Button>
+                    <Button
+                      size="xs"
+                      colorScheme="purple"
+                      onClick={() => handleAssignClick(c)}
+                    >
+                      Assign To
                     </Button>
                   </Grid>
                 ))}
@@ -407,6 +593,15 @@ export default function ComplaintList() {
                         >
                           View Attachment
                         </Button>
+                        <Button
+                          size="sm"
+                          colorScheme="purple"
+                          w="100%"
+                          mt={2}
+                          onClick={() => handleAssignClick(c)}
+                        >
+                          Assign To
+                        </Button>
                       </VStack>
                     </Box>
                   );
@@ -447,6 +642,167 @@ export default function ComplaintList() {
           </ModalBody>
         </ModalContent>
       </Modal>
+
+      {/* Assign Employee Modal */}
+      <Modal
+        isOpen={isAssignOpen}
+        onClose={onAssignClose}
+        isCentered
+        size="xl"
+      >
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Assign Employee</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {selectedComplaint && (
+              <VStack align="stretch" spacing={6}>
+                {/* Ticket Details */}
+                <Box bg="blue.50" p={4} borderRadius="md" borderLeft="4px solid" borderColor="blue.400">
+                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                    <Box>
+                      <Text fontSize="xs" color="gray.500" fontWeight="bold" textTransform="uppercase">Ticket Number</Text>
+                      <Text fontSize="lg" fontWeight="bold" color="blue.700">{selectedComplaint.ticket_number}</Text>
+                    </Box>
+                    <Box>
+                      <Text fontSize="xs" color="gray.500" fontWeight="bold" textTransform="uppercase">Raised By</Text>
+                      <Text fontSize="lg" fontWeight="bold">{selectedComplaint.raised_by_name}</Text>
+                    </Box>
+                  </SimpleGrid>
+                </Box>
+
+                {/* Filters */}
+                <HStack>
+                  <Text fontWeight="medium" whiteSpace="nowrap" fontSize="sm">Department:</Text>
+                  <Select
+                    placeholder="All Departments"
+                    value={assignDeptFilter}
+                    onChange={(e) => setAssignDeptFilter(e.target.value)}
+                    maxW="300px"
+                  >
+                    {deptOptions.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </Select>
+                </HStack>
+
+                {/* Search Input */}
+                <Box position="relative">
+                  <InputGroup>
+                    <InputLeftElement pointerEvents="none">
+                      {isSearchingEmployees ? <Spinner size="xs" /> : <SearchIcon color="gray.300" />}
+                    </InputLeftElement>
+                    <Input
+                      placeholder="Search employee by name or ID..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        if (selectedEmployeeId) {
+                          setSelectedEmployeeId(null);
+                          setSelectedEmployeeData(null);
+                        }
+                      }}
+                      focusBorderColor="purple.400"
+                    />
+                  </InputGroup>
+
+                  {/* Search Results Dropdown */}
+                  {!selectedEmployeeId && (searchResults.length > 0 || searchTerm || assignDeptFilter) && (
+                    <List
+                      position="absolute"
+                      top="100%"
+                      left={0}
+                      right={0}
+                      bg="white"
+                      boxShadow="dark-lg"
+                      borderRadius="md"
+                      zIndex={1500}
+                      maxH="200px"
+                      overflowY="auto"
+                      border="1px solid"
+                      borderColor="gray.100"
+                      mt={1}
+                    >
+                      {searchResults.length > 0 ? (
+                        searchResults.map((emp) => (
+                          <ListItem
+                            key={emp.employee_id}
+                            p={3}
+                            _hover={{ bg: "purple.50", cursor: "pointer" }}
+                            onClick={() => {
+                              setSelectedEmployeeId(emp.employee_id.toString());
+                              setSelectedEmployeeData(emp);
+                              setSearchTerm("");
+                              setSearchResults([]);
+                            }}
+                            borderBottom="1px solid"
+                            borderColor="gray.100"
+                          >
+                            <HStack spacing={3}>
+                              <Avatar size="sm" name={emp.employee_name} />
+                              <Box>
+                                <Text fontSize="sm" fontWeight="bold" color="gray.700">{emp.employee_name}</Text>
+                                <Text fontSize="xs" color="gray.500">{emp.department} • {emp.designation} • ID: {emp.employee_id}</Text>
+                              </Box>
+                            </HStack>
+                          </ListItem>
+                        ))
+                      ) : (
+                        <ListItem p={4} textAlign="center">
+                          <Text fontSize="sm" color="gray.500">No employees found.</Text>
+                        </ListItem>
+                      )}
+                    </List>
+                  )}
+                </Box>
+
+                {/* Selected Employee Card */}
+                {selectedEmployeeId && (
+                  <Box p={4} borderWidth="1px" borderRadius="lg" bg="purple.50" borderColor="purple.200">
+                    <HStack justify="space-between">
+                      <HStack spacing={4}>
+                        <Avatar size="md" name={displayEmployee?.employee_name || "Employee"} bg="purple.500" />
+                        <Box>
+                          <Text fontWeight="bold" color="purple.800">
+                            {displayEmployee?.employee_name || `Employee ID: ${selectedEmployeeId}`}
+                          </Text>
+                          <Text fontSize="sm" color="purple.600">
+                            {displayEmployee ? `${displayEmployee.department} - ${displayEmployee.designation}` : "Selected for assignment"}
+                          </Text>
+                        </Box>
+                      </HStack>
+                      <Button size="sm" variant="ghost" colorScheme="red" onClick={() => {
+                        setSelectedEmployeeId(null);
+                        setSelectedEmployeeData(null);
+                      }}>
+                        Remove
+                      </Button>
+                    </HStack>
+                  </Box>
+                )}
+              </VStack>
+            )}
+          </ModalBody>
+
+          <ModalFooter bg="gray.50" borderBottomRadius="md">
+            <Flex w="full" justify="space-between">
+              <Button colorScheme="red" variant="ghost" leftIcon={<DeleteIcon />} onClick={handleUnassign} isDisabled={isAssigning}>
+                Unassign
+              </Button>
+              <HStack spacing={3}>
+                <Button variant="outline" onClick={onAssignClose}>Cancel</Button>
+                <Button
+                  colorScheme="blue"
+                  onClick={handleUpdate}
+                  isLoading={isAssigning}
+                >
+                  Update
+                </Button>
+              </HStack>
+            </Flex>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }
@@ -465,8 +821,10 @@ function StatCard({ title, value, color, total }) {
 
 // Status color helper
 function getStatusColor(status) {
-  switch(status) {
+  const normalizedStatus = status ? status.toUpperCase() : "";
+  switch(normalizedStatus) {
     case "OPEN": return "blue";
+    case "ASSIGNED": return "purple";
     case "IN_PROGRESS": return "orange";
     case "RESOLVED": return "green";
     case "CLOSED": return "gray";

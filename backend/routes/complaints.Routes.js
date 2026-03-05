@@ -1,48 +1,14 @@
 import express from "express";
-import upload from "../middleware/upload.js";
-import {
-  getComplaintMaster,
-  postComplaintMaster,
-  updateComplaintMaster,
-  deleteComplaintMaster,
-  getComplaintList,
-  updateComplaintStatus,
-  getComplaintAttachments,
-  postComplaintAttachment,
-  deleteComplaintAttachment
-} from "../controllers/complaint.Controller.js";
+import { getComplaintList, updateComplaintStatus } from "../controllers/complaint.Controller.js";
 
-const complaintRouter = express.Router();
+const router = express.Router();
 
-// Complaint master routes
-complaintRouter.get("/getComplaintMaster", getComplaintMaster);
+// Route for complaint_list.jsx to get all complaints
+// GET /api/complaint_list/getComplaintList
+router.get("/getComplaintList", getComplaintList);
 
-complaintRouter.post(
-  "/postComplaintMaster",
-  upload,
-  postComplaintMaster
-);
+// Route for complaint_list.jsx to assign/update/delete an assignment
+// PUT /api/complaint_list/assign/:complaint_id
+router.put("/assign/:complaint_id", updateComplaintStatus);
 
-complaintRouter.put("/updateComplaintMaster/:complaint_id", updateComplaintMaster);
-
-complaintRouter.delete("/deleteComplaintMaster/:complaint_id", deleteComplaintMaster);
-
-// Complaint list routes
-complaintRouter.get("/getComplaintList", getComplaintList);
-complaintRouter.patch("/updateStatus/:complaint_id", updateComplaintStatus);
-
-// Attachment routes
-complaintRouter.get("/getComplaintAttachments", getComplaintAttachments);
-
-complaintRouter.post(
-  "/postComplaintAttachment",
-  upload,
-  postComplaintAttachment
-);
-
-complaintRouter.delete(
-  "/deleteComplaintAttachment/:attachment_id",
-  deleteComplaintAttachment
-);
-
-export default complaintRouter;
+export default router;

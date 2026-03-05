@@ -238,7 +238,6 @@ import con from "../db.js";
 
 /* ===============================
    GET ALL EMPLOYEES
-================================ */
 export const getEmployees = async (req, res) => {
   try {
     const result = await con.query(`
@@ -278,7 +277,6 @@ export const getEmployees = async (req, res) => {
 
 /* ===============================
    REGISTER EMPLOYEE
-================================ */
 export const registerEmployee = async (req, res) => {
   try {
     const {
