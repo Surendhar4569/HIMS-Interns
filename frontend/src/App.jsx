@@ -20,8 +20,6 @@ import EmployeeRequest from "./pages/EmployeeRequest";
 
 import PatientRecords from "./pages/patientsRecords";
 import RegisterPatient from "./pages/registerPatient";
-import FeedbackForm from "./pages/FeedbackForm";
-import FeedbackList from "./pages/FeedbackList";
 import EmployeeRecords from "./pages/employee"
 
 function App() {

@@ -99,7 +99,6 @@ function FeedbackList() {
   return (
     <>
       <Box 
-        ml="260px" 
         p={8} 
         bg="white" 
         borderRadius="2xl" 

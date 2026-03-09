@@ -233,7 +233,6 @@ function FeedbackForm() {
   return (
     <>
     <Box 
-  ml="350px" 
   bg="white" 
   p={10} 
   borderRadius="2xl" 

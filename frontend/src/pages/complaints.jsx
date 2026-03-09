@@ -92,7 +92,7 @@ export default function Complaints() {
       if (formData.attachment_path) data.append("attachment_path", formData.attachment_path);
 
       const response = await fetch(
-        "http://localhost:3000/api/complaint_master/postComplaintMaster",
+        "http://localhost:3000/complaints/postComplaintMaster",
         { method: "POST", body: data }
       );
       const result = await response.json();

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+
 import {
   Flex,
   Box,
@@ -26,7 +27,7 @@ import {
   Td,
 } from "@chakra-ui/react";
 
-function RegisterPatient({ onSave }) {
+function RegisterPatient({  onSave }) {
   const toast = useToast();
 
   const [tabIndex, setTabIndex] = useState(0);
@@ -51,6 +52,7 @@ function RegisterPatient({ onSave }) {
   useEffect(() => {
     fetchPatients();
   }, []);
+  //
 
   const fetchPatients = async () => {
     try {
@@ -115,7 +117,8 @@ function RegisterPatient({ onSave }) {
 
     if (!formData.dob) newErrors.dob = "Date of Birth is required";
     if (!formData.gender) newErrors.gender = "Gender is required";
-    if (!formData.blood_group) newErrors.blood_group = "Blood group is required";
+    if (!formData.blood_group)
+      newErrors.blood_group = "Blood group is required";
     if (!formData.address.trim()) newErrors.address = "Address is required";
 
     setErrors(newErrors);
@@ -146,9 +149,7 @@ function RegisterPatient({ onSave }) {
     const url = editId
       ? `http://localhost:3000/patient/updatePatient/${editId}`
       : "http://localhost:3000/patient/registerPatient";
-
     const method = editId ? "PUT" : "POST";
-
     try {
       setLoading(true);
 
@@ -165,6 +166,16 @@ function RegisterPatient({ onSave }) {
         status: "success",
         duration: 2000,
       });
+      if (editId) {
+        setPatients((prev) =>
+          prev.map((p) =>
+            p.patient_id === editId ? { ...p, ...formData } : p
+          )
+        );
+      } else {
+        setPatients((prev) => [result.data, ...prev]);
+      }
+
 
       if (result?.data && typeof onSave === "function") {
         onSave(result.data, !!editId);
@@ -176,7 +187,7 @@ function RegisterPatient({ onSave }) {
 
       resetForm();
     } catch (err) {
-      toast({ title: "Operation Failed", status: "error" ,description:err});
+      toast({ title: "Operation Failed", status: "error", description: err });
     } finally {
       setLoading(false);
     }
@@ -200,14 +211,26 @@ function RegisterPatient({ onSave }) {
       setPatients((prev) => prev.filter((p) => p.patient_id !== id));
       toast({ title: "Deleted Successfully", status: "success" });
     } catch (err) {
-      toast({ title: "Delete Failed", status: "error",description:err });
+      toast({ title: "Delete Failed", status: "error", description: err });
     }
   };
 
   return (
     <Flex minH="100vh" align="center" justify="center" bg="gray.50" p={6}>
-      <Box  ml="260px" maxW="1000px" w="100%" p={6} bg="white" boxShadow="lg" borderRadius="xl">
-        <Tabs index={tabIndex} onChange={(i) => setTabIndex(i)} variant="enclosed">
+      <Box
+        ml="260px"
+        maxW="1000px"
+        w="100%"
+        p={6}
+        bg="white"
+        boxShadow="lg"
+        borderRadius="xl"
+      >
+        <Tabs
+          index={tabIndex}
+          onChange={(i) => setTabIndex(i)}
+          variant="enclosed"
+        >
           <TabList>
             <Tab>Register Patient</Tab>
             <Tab>All Patients</Tab>
@@ -249,7 +272,11 @@ function RegisterPatient({ onSave }) {
                   <GridItem>
                     <FormControl isInvalid={!!errors.gender}>
                       <FormLabel>Gender *</FormLabel>
-                      <Select name="gender" value={formData.gender} onChange={handleChange}>
+                      <Select
+                        name="gender"
+                        value={formData.gender}
+                        onChange={handleChange}
+                      >
                         <option value="">Select</option>
                         <option>Male</option>
                         <option>Female</option>
@@ -262,12 +289,20 @@ function RegisterPatient({ onSave }) {
                   <GridItem>
                     <FormControl isInvalid={!!errors.blood_group}>
                       <FormLabel>Blood Group *</FormLabel>
-                      <Select name="blood_group" value={formData.blood_group} onChange={handleChange}>
+                      <Select
+                        name="blood_group"
+                        value={formData.blood_group}
+                        onChange={handleChange}
+                      >
                         <option value="">Select</option>
-                        <option>A+</option><option>A-</option>
-                        <option>B+</option><option>B-</option>
-                        <option>AB+</option><option>AB-</option>
-                        <option>O+</option><option>O-</option>
+                        <option>A+</option>
+                        <option>A-</option>
+                        <option>B+</option>
+                        <option>B-</option>
+                        <option>AB+</option>
+                        <option>AB-</option>
+                        <option>O+</option>
+                        <option>O-</option>
                       </Select>
                       <FormErrorMessage>{errors.blood_group}</FormErrorMessage>
                     </FormControl>
@@ -276,7 +311,12 @@ function RegisterPatient({ onSave }) {
                   <GridItem>
                     <FormControl isInvalid={!!errors.dob}>
                       <FormLabel>Date of Birth *</FormLabel>
-                      <Input type="date" name="dob" value={formData.dob} onChange={handleChange} />
+                      <Input
+                        type="date"
+                        name="dob"
+                        value={formData.dob}
+                        onChange={handleChange}
+                      />
                       <FormErrorMessage>{errors.dob}</FormErrorMessage>
                     </FormControl>
                   </GridItem>
@@ -290,14 +330,20 @@ function RegisterPatient({ onSave }) {
                         onChange={handleChange}
                         maxLength={10}
                       />
-                      <FormErrorMessage>{errors.contact_number}</FormErrorMessage>
+                      <FormErrorMessage>
+                        {errors.contact_number}
+                      </FormErrorMessage>
                     </FormControl>
                   </GridItem>
 
                   <GridItem colSpan={2}>
                     <FormControl isInvalid={!!errors.address}>
                       <FormLabel>Address *</FormLabel>
-                      <Textarea name="address" value={formData.address} onChange={handleChange} />
+                      <Textarea
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
+                      />
                       <FormErrorMessage>{errors.address}</FormErrorMessage>
                     </FormControl>
                   </GridItem>
@@ -310,7 +356,9 @@ function RegisterPatient({ onSave }) {
                         value={formData.emergency_name}
                         onChange={handleChange}
                       />
-                      <FormErrorMessage>{errors.emergency_name}</FormErrorMessage>
+                      <FormErrorMessage>
+                        {errors.emergency_name}
+                      </FormErrorMessage>
                     </FormControl>
                   </GridItem>
 
@@ -323,7 +371,9 @@ function RegisterPatient({ onSave }) {
                         onChange={handleChange}
                         maxLength={10}
                       />
-                      <FormErrorMessage>{errors.emergency_contact_number}</FormErrorMessage>
+                      <FormErrorMessage>
+                        {errors.emergency_contact_number}
+                      </FormErrorMessage>
                     </FormControl>
                   </GridItem>
                 </Grid>
@@ -332,7 +382,11 @@ function RegisterPatient({ onSave }) {
                   <Button colorScheme="blue" type="submit" isLoading={loading}>
                     {editId ? "Update" : "Register"}
                   </Button>
-                  <Button variant="outline" colorScheme="blue" onClick={resetForm}>
+                  <Button
+                    variant="outline"
+                    colorScheme="blue"
+                    onClick={resetForm}
+                  >
                     Clear
                   </Button>
                 </Flex>
@@ -362,10 +416,18 @@ function RegisterPatient({ onSave }) {
                       <Td>{p.contact_number}</Td>
                       <Td>
                         <Flex gap={2}>
-                          <Button size="sm" colorScheme="blue" onClick={() => handleEdit(p)}>
+                          <Button
+                            size="sm"
+                            colorScheme="blue"
+                            onClick={() => handleEdit(p)}
+                          >
                             Update
                           </Button>
-                          <Button size="sm" colorScheme="red" onClick={() => handleDelete(p.patient_id)}>
+                          <Button
+                            size="sm"
+                            colorScheme="red"
+                            onClick={() => handleDelete(p.patient_id)}
+                          >
                             Delete
                           </Button>
                         </Flex>
@@ -383,4 +445,3 @@ function RegisterPatient({ onSave }) {
 }
 
 export default RegisterPatient;
-

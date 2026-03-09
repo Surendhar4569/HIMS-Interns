@@ -39,6 +39,7 @@ function PatientRecords() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPatients();
   }, []);
 
@@ -108,10 +109,7 @@ function PatientRecords() {
             colorScheme="blue"
             isFitted
           >
-            <TabList mb="1em" p={1} bg="gray.100" borderRadius="full">
-              <Tab borderRadius="full">Registration Form</Tab>
-              <Tab borderRadius="full">Patient List</Tab>
-            </TabList>
+            
 
             <TabPanels>
               <TabPanel>
@@ -173,9 +171,3 @@ function PatientRecords() {
 }
 
 export default PatientRecords;
-
-
-
-
-
-

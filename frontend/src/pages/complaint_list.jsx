@@ -32,13 +32,25 @@ import {
   Avatar,
   IconButton,
 } from "@chakra-ui/react";
-import { DownloadIcon, RepeatIcon, ChevronLeftIcon, ChevronRightIcon, DeleteIcon, SearchIcon } from "@chakra-ui/icons";
+import {
+  DownloadIcon,
+  RepeatIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  DeleteIcon,
+  SearchIcon,
+} from "@chakra-ui/icons";
+// eslint-disable-next-line no-unused-vars
 import { AnimatePresence, motion } from "framer-motion";
 
 export default function ComplaintList() {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { isOpen: isAssignOpen, onOpen: onAssignOpen, onClose: onAssignClose } = useDisclosure();
+  const {
+    isOpen: isAssignOpen,
+    onOpen: onAssignOpen,
+    onClose: onAssignClose,
+  } = useDisclosure();
   const [previewFile, setPreviewFile] = useState("");
 
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -46,13 +58,17 @@ export default function ComplaintList() {
   const [filtered, setFiltered] = useState([]);
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [originalEmployeeId, setOriginalEmployeeId] = useState(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignDeptFilter, setAssignDeptFilter] = useState("");
-  
+  // eslint-disable-next-line no-unused-vars
+  const [currentAssignment, setCurrentAssignment] = useState(null);
+
   // Search States
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [isSearchingEmployees, setIsSearchingEmployees] = useState(false);
   const [allEmployees, setAllEmployees] = useState([]);
   const [selectedEmployeeData, setSelectedEmployeeData] = useState(null);
@@ -64,6 +80,7 @@ export default function ComplaintList() {
   const [deptFilter, setDeptFilter] = useState("");
   const [deptOptions, setDeptOptions] = useState([]);
 
+  const [assignedInfo, setAssignedInfo] = useState(null);
   const [view, setView] = useState("list");
   const [page, setPage] = useState(1);
   const pageSize = 10;
@@ -72,26 +89,35 @@ export default function ComplaintList() {
   const fetchComplaints = async () => {
     try {
       const res = await fetch(
-        "http://localhost:3000/api/complaint_list/getComplaintList"
+        "http://localhost:3000/api/complaint_list/getComplaintList",
       );
       const data = await res.json();
+
       if (data.success) {
         setComplaints(data.data || []);
         setFiltered(data.data || []);
       }
     } catch (err) {
       console.error(err);
-      toast({ title: "Failed to fetch complaints", status: "error", duration: 2000 });
+      toast({
+        title: "Failed to fetch complaints",
+        status: "error",
+        duration: 2000,
+      });
     }
   };
 
   const fetchEmployeesData = async () => {
     try {
-      const res = await fetch("http://localhost:3000/api/employee/getEmployees");
+      const res = await fetch(
+        "http://localhost:3000/api/employee/getEmployees",
+      );
       const data = await res.json();
       if (data.success) {
         setAllEmployees(data.data || []);
-        const unique = [...new Set(data.data.map((e) => e.department).filter(Boolean))];
+        const unique = [
+          ...new Set(data.data.map((e) => e.department).filter(Boolean)),
+        ];
         setDeptOptions(unique);
       }
     } catch (err) {
@@ -104,28 +130,32 @@ export default function ComplaintList() {
     fetchEmployeesData();
   }, []);
 
-  // Client-side Employee Search
+
+
   useEffect(() => {
-    if (!isAssignOpen) {
-      setSearchResults([]);
-      return;
-    }
+    if (!isAssignOpen) return;
 
     const term = searchTerm.trim().toLowerCase();
 
-    // If both filters are empty, show no results to avoid loading the full list by default.
-    if (!term && !assignDeptFilter) {
-      setSearchResults([]);
-      return;
-    }
-
     const results = allEmployees.filter((emp) => {
-      const matchesTerm = !term || emp.employee_name?.toLowerCase().includes(term) || emp.employee_id?.toString().includes(term);
-      const matchesDept = assignDeptFilter ? emp.department === assignDeptFilter : true;
-      return matchesTerm && matchesDept;
+      // 1. Match Department
+      const matchesDept = assignDeptFilter
+        ? emp.department === assignDeptFilter
+        : true;
+
+      // 2. Match Search Term (if empty, matches everything)
+      const matchesTerm =
+        !term ||
+        emp.employee_name?.toLowerCase().includes(term) ||
+        emp.employee_id?.toString().includes(term);
+
+      return matchesDept && matchesTerm;
     });
 
     setSearchResults(results.slice(0, 15));
+
+    // Logic Fix: If we are in "Update" mode and results are found,
+    // they will now show because we removed the !selectedEmployeeId check above.
   }, [searchTerm, assignDeptFilter, isAssignOpen, allEmployees]);
 
   useEffect(() => {
@@ -134,12 +164,13 @@ export default function ComplaintList() {
       temp = temp.filter(
         (c) =>
           c.ticket_number?.toLowerCase().includes(search.toLowerCase()) ||
-          c.raised_by_name?.toLowerCase().includes(search.toLowerCase())
+          c.raised_by_name?.toLowerCase().includes(search.toLowerCase()),
       );
     }
     if (status) temp = temp.filter((c) => c.status === status);
     if (priority) temp = temp.filter((c) => c.priority === priority);
-    if (raisedByType) temp = temp.filter((c) => c.raised_by_type === raisedByType);
+    if (raisedByType)
+      temp = temp.filter((c) => c.raised_by_type === raisedByType);
     if (deptFilter) temp = temp.filter((c) => c.department === deptFilter);
     setFiltered(temp);
     setPage(1);
@@ -157,11 +188,27 @@ export default function ComplaintList() {
     setPage(1);
   };
 
-  const openAttachmentModal = (path) => {
+  // Update this function to take the whole complaint object
+  const openAttachmentModal = (complaint) => {
+
+    const path = complaint.attachment_path || complaint.file_name;
     if (!path) {
-      toast({ title: "No attachment available", status: "warning", duration: 2000 });
+      toast({
+        title: "No attachment available",
+        status: "warning",
+        duration: 2000,
+      });
       return;
     }
+
+    // Set the assignment info from the complaint object
+    // Note: Ensure your backend API returns 'assigned_employee_name' or similar
+    setAssignedInfo({
+      name: complaint.employee_name || "Not Assigned",
+      id: complaint.assigned_employee_id || "N/A",
+      dept: complaint.department,
+    });
+
     let url = /^https?:\/\//i.test(path)
       ? path
       : `${window.location.origin}/${path.startsWith("/") ? path.slice(1) : path}`;
@@ -182,22 +229,69 @@ export default function ComplaintList() {
       link.click();
       document.body.removeChild(link);
     } catch (err) {
-      toast({ title: "Download failed", description: err.message, status: "error", duration: 2000 });
+      toast({
+        title: "Download failed",
+        description: err.message,
+        status: "error",
+        duration: 2000,
+      });
     }
   };
 
-  const handleAssignClick = (complaint) => {
+  const handleAssignClick = async (complaint) => {
     setSelectedComplaint(complaint);
-    const empId = complaint.employee_id ? complaint.employee_id.toString() : null;
-    setSelectedEmployeeId(empId);
-    setOriginalEmployeeId(empId);
-    setAssignDeptFilter("");
+
+    try {
+      const res = await fetch(
+        `http://localhost:3000/complaints/get-complaint-assigned/${complaint.complaint_id}`,
+      );
+
+      const data = await res.json();
+
+      if (res.ok && data.success && data.data.length > 0) {
+        const assignment = data.data.find(
+          (a) => a.complaint_id === complaint.complaint_id,
+        );
+
+        setSelectedEmployeeId(
+          assignment?.assigned_employee_id
+            ? assignment.assigned_employee_id.toString()
+            : null,
+        );
+        setOriginalEmployeeId(assignment.assigned_employee_id.toString());
+
+        // IMPORTANT: store assignment_id
+        setCurrentAssignment(assignment);
+
+        setSelectedComplaint((prev) => ({
+          ...prev,
+          assignment_id: assignment.assignment_id,
+        }));
+      } else {
+        setSelectedEmployeeId(null);
+        setOriginalEmployeeId(null);
+        setCurrentAssignment(null);
+
+        setSelectedComplaint((prev) => ({
+          ...prev,
+          assignment_id: null,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch assignment:", err);
+
+      setSelectedEmployeeId(null);
+      setOriginalEmployeeId(null);
+      setCurrentAssignment(null);
+    }
+
+    setAssignDeptFilter(complaint.department || "");
     setSearchTerm("");
     setSearchResults([]);
-    setSelectedEmployeeData(null); // Reset detailed data, will rely on ID or search selection
+    setSelectedEmployeeData(null);
+
     onAssignOpen();
   };
-
   const handleUpdate = async () => {
     if (!selectedEmployeeId) {
       toast({
@@ -210,39 +304,63 @@ export default function ComplaintList() {
     }
 
     setIsAssigning(true);
+
     try {
-      console.log("Updating complaint:", selectedComplaint.complaint_id, "Employee:", selectedEmployeeId);
-      const response = await fetch(
-        `http://localhost:3000/api/complaint_list/assign/${encodeURIComponent(selectedComplaint.complaint_id)}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            employee_id: parseInt(selectedEmployeeId, 10),
-            status: "ASSIGNED",
-          }),
-        }
-      );
+      const isUpdate = selectedComplaint?.assignment_id ? true : false;
+
+      const url = isUpdate
+        ? `http://localhost:3000/complaints/update-complaint-assigned/${selectedComplaint.assignment_id}`
+        : "http://localhost:3000/complaints/post-complaint-assigned";
+
+      const method = isUpdate ? "PUT" : "POST";
+
+      const bodyData = isUpdate
+        ? {
+            assigned_employee_id: parseInt(selectedEmployeeId, 10),
+            changed_by: 100,
+            remarks: "Updated from UI",
+          }
+        : {
+            complaint_id: selectedComplaint.complaint_id,
+            assigned_employee_id: parseInt(selectedEmployeeId, 10),
+            changed_by: 100,
+            remarks: "Assigned from UI",
+          };
+
+      console.log("API:", url);
+      console.log("Body:", bodyData);
+
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bodyData),
+      });
 
       if (!response.ok) {
         const text = await response.text();
         console.error("Server Error:", response.status, text);
-        throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`);
+        throw new Error(`Server error (${response.status})`);
       }
 
       const result = await response.json();
 
-      if (response.ok && result.success) {
-        toast({ title: "Updated Successfully", status: "success", duration: 2000 });
+      if (result.success) {
+        toast({
+          title: isUpdate ? "Assignment Updated" : "Complaint Assigned",
+          status: "success",
+          duration: 2000,
+        });
+
         onAssignClose();
-        fetchComplaints(); // Refresh the list
-      } else {
-        throw new Error(result.message || "Failed to update complaint");
+        fetchComplaints(); // refresh table
       }
     } catch (error) {
       console.error("Update Error:", error);
+
       toast({
-        title: "Update Failed",
+        title: "Operation Failed",
         description: error.message,
         status: "error",
         duration: 3000,
@@ -252,59 +370,66 @@ export default function ComplaintList() {
     }
   };
 
-  const handleUnassign = async () => {
-    if (!window.confirm("Are you sure you want to unassign this complaint?")) return;
+  const handleUnassign = async (assignment_id) => {
+    if (!assignment_id) {
+      toast({
+        title: "Assignment ID missing",
+        status: "error",
+        duration: 2000,
+      });
+      return;
+    }
 
-    setIsAssigning(true);
     try {
-      console.log("Unassigning complaint:", selectedComplaint.complaint_id);
       const response = await fetch(
-        `http://localhost:3000/api/complaint_list/assign/${encodeURIComponent(selectedComplaint.complaint_id)}`,
+        `http://localhost:3000/complaints/delete-complaint-assigned/${assignment_id}`,
         {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            employee_id: null,
-            status: "OPEN",
-          }),
-        }
+          method: "DELETE",
+        },
       );
 
-      if (!response.ok) {
-        const text = await response.text();
-        console.error("Server Error:", response.status, text);
-        throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`);
-      }
+      const data = await response.json();
 
-      const result = await response.json();
+      if (data.success) {
+        await fetchComplaints(); // refresh list first
 
-      if (response.ok && result.success) {
-        toast({ title: "Unassigned Successfully", status: "success", duration: 2000 });
-        onAssignClose();
-        fetchComplaints();
+        onAssignClose(); // then close modal
+
+        toast({
+          title: "Complaint Unassigned",
+          status: "success",
+          duration: 2000,
+        });
       } else {
-        throw new Error(result.message || "Failed to unassign complaint");
+        throw new Error(data.message);
       }
     } catch (error) {
-      console.error("Unassign Error:", error);
+      console.error("Unassign error:", error);
+
       toast({
-        title: "Unassign Failed",
+        title: "Unassign failed",
         description: error.message,
         status: "error",
-        duration: 3000,
+        duration: 2000,
       });
-    } finally {
-      setIsAssigning(false);
     }
   };
 
-  const openCount = complaints.filter((c) => c.status?.toUpperCase() === "OPEN").length;
-  const progressCount = complaints.filter((c) => c.status?.toUpperCase() === "IN_PROGRESS").length;
-  const resolvedCount = complaints.filter((c) => c.status?.toUpperCase() === "RESOLVED").length;
+  const openCount = complaints.filter(
+    (c) => c.status?.toUpperCase() === "OPEN",
+  ).length;
+  const progressCount = complaints.filter(
+    (c) => c.status?.toUpperCase() === "IN_PROGRESS",
+  ).length;
+  const resolvedCount = complaints.filter(
+    (c) => c.status?.toUpperCase() === "RESOLVED",
+  ).length;
   const totalCount = complaints.length || 1;
 
   // Helper to get display data for selected employee
-  const displayEmployee = selectedEmployeeData || allEmployees.find(e => e.employee_id.toString() === selectedEmployeeId);
+  const displayEmployee =
+    selectedEmployeeData ||
+    allEmployees.find((e) => e.employee_id.toString() === selectedEmployeeId);
 
   return (
     <Box bg="gray.50" minH="100vh">
@@ -328,9 +453,24 @@ export default function ComplaintList() {
 
         {/* Stats */}
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={6}>
-          <StatCard title="Open" value={openCount} color="blue.400" total={totalCount} />
-          <StatCard title="In Progress" value={progressCount} color="yellow.400" total={totalCount} />
-          <StatCard title="Resolved" value={resolvedCount} color="green.400" total={totalCount} />
+          <StatCard
+            title="Open"
+            value={openCount}
+            color="blue.400"
+            total={totalCount}
+          />
+          <StatCard
+            title="In Progress"
+            value={progressCount}
+            color="yellow.400"
+            total={totalCount}
+          />
+          <StatCard
+            title="Resolved"
+            value={resolvedCount}
+            color="green.400"
+            total={totalCount}
+          />
         </SimpleGrid>
 
         {/* Filters */}
@@ -399,7 +539,9 @@ export default function ComplaintList() {
               focusBorderColor="blue.400"
             >
               {deptOptions.map((dept) => (
-                <option key={dept} value={dept}>{dept}</option>
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
               ))}
             </Select>
             <Button
@@ -445,7 +587,12 @@ export default function ComplaintList() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
             >
-              <Box bg="white" borderRadius="xl" boxShadow="sm" overflow="hidden">
+              <Box
+                bg="white"
+                borderRadius="xl"
+                boxShadow="sm"
+                overflow="hidden"
+              >
                 <Grid
                   templateColumns="0.5fr 1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr"
                   columnGap={4}
@@ -498,17 +645,17 @@ export default function ComplaintList() {
                     <Button
                       size="xs"
                       colorScheme="blue"
-                      onClick={() => openAttachmentModal(c.attachment_path || c.file_name)}
+                      onClick={() => openAttachmentModal(c)}
                       isDisabled={!c.attachment_path && !c.file_name}
                     >
                       View
                     </Button>
                     <Button
                       size="xs"
-                      colorScheme="purple"
+                      colorScheme={c.assignment_id ? "orange" : "blue"}
                       onClick={() => handleAssignClick(c)}
                     >
-                      Assign To
+                      {c.assignment_id ? "Update Assign" : "Assign"}
                     </Button>
                   </Grid>
                 ))}
@@ -528,7 +675,10 @@ export default function ComplaintList() {
                     MEDIUM: { bg: "yellow.100", color: "yellow.800" },
                     HIGH: { bg: "red.100", color: "red.700" },
                   };
-                  const priority = priorityStyles[c.priority] || { bg: "gray.100", color: "gray.700" };
+                  const priority = priorityStyles[c.priority] || {
+                    bg: "gray.100",
+                    color: "gray.700",
+                  };
                   return (
                     <Box
                       key={c.complaint_id}
@@ -538,7 +688,10 @@ export default function ComplaintList() {
                       boxShadow="sm"
                       border="1px solid"
                       borderColor="gray.100"
-                      _hover={{ transform: "translateY(-3px)", boxShadow: "md" }}
+                      _hover={{
+                        transform: "translateY(-3px)",
+                        boxShadow: "md",
+                      }}
                       transition="0.2s"
                       position="relative"
                     >
@@ -558,7 +711,9 @@ export default function ComplaintList() {
                       </Box>
 
                       <VStack align="start" spacing={2}>
-                        <Text fontWeight="bold" fontSize="md">{c.ticket_number}</Text>
+                        <Text fontWeight="bold" fontSize="md">
+                          {c.ticket_number}
+                        </Text>
 
                         <Text fontSize="sm" color="gray.600">
                           <strong>NAME:</strong> {c.raised_by_name}
@@ -570,16 +725,28 @@ export default function ComplaintList() {
                           <strong>DEPARTMENT:</strong> {c.department}
                         </Text>
 
-                        <Text fontWeight="semibold" fontSize="sm" color="gray.700" mt={2}>
+                        <Text
+                          fontWeight="semibold"
+                          fontSize="sm"
+                          color="gray.700"
+                          mt={2}
+                        >
                           Complaint Description :
                         </Text>
                         <Box p={3} borderRadius="md" w="100%" bg="gray.50">
                           <Text fontSize="sm" color="gray.700" noOfLines={3}>
-                            {c.complaint_description || "No description provided."}
+                            {c.complaint_description ||
+                              "No description provided."}
                           </Text>
                         </Box>
 
-                        <Badge colorScheme={getStatusColor(c.status)} variant="subtle" borderRadius="full" px={3} py={1}>
+                        <Badge
+                          colorScheme={getStatusColor(c.status)}
+                          variant="subtle"
+                          borderRadius="full"
+                          px={3}
+                          py={1}
+                        >
                           {c.status}
                         </Badge>
 
@@ -588,7 +755,7 @@ export default function ComplaintList() {
                           colorScheme="blue"
                           w="100%"
                           mt={2}
-                          onClick={() => openAttachmentModal(c.attachment_path || c.file_name)}
+                          onClick={() => openAttachmentModal(c)}
                           isDisabled={!c.attachment_path && !c.file_name}
                         >
                           View Attachment
@@ -613,11 +780,30 @@ export default function ComplaintList() {
 
         {/* Pagination */}
         <Flex mt={6} justify="center" align="center" gap={2} wrap="wrap">
-          <Button size="sm" onClick={() => setPage(page - 1)} isDisabled={page === 1}>Prev</Button>
+          <Button
+            size="sm"
+            onClick={() => setPage(page - 1)}
+            isDisabled={page === 1}
+          >
+            Prev
+          </Button>
           {Array.from({ length: totalPages }, (_, i) => (
-            <Button key={i} size="sm" colorScheme={page === i + 1 ? "blue" : "gray"} onClick={() => setPage(i + 1)}>{i + 1}</Button>
+            <Button
+              key={i}
+              size="sm"
+              colorScheme={page === i + 1 ? "blue" : "gray"}
+              onClick={() => setPage(i + 1)}
+            >
+              {i + 1}
+            </Button>
           ))}
-          <Button size="sm" onClick={() => setPage(page + 1)} isDisabled={page === totalPages || totalPages === 0}>Next</Button>
+          <Button
+            size="sm"
+            onClick={() => setPage(page + 1)}
+            isDisabled={page === totalPages || totalPages === 0}
+          >
+            Next
+          </Button>
         </Flex>
       </Box>
 
@@ -626,17 +812,87 @@ export default function ComplaintList() {
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Attachment Preview</ModalHeader>
+
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4}>
+              <Box
+                p={3}
+                bg="blue.50"
+                borderRadius="lg"
+                border="1px solid"
+                borderColor="blue.100"
+              >
+                <Flex
+                    justify="space-between"
+                    align="center"
+                    p={3}
+                    borderWidth="1px"
+                    borderRadius="md"
+                    bg="gray.50"
+                  >
+                    <HStack spacing={3}>
+                      <Avatar
+                        size="sm"
+                        name={assignedInfo?.name}
+                        bg="blue.500"
+                      />
+
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="sm" fontWeight="semibold">
+                          {assignedInfo?.name || "Not Assigned"}
+                        </Text>
+
+                        <Text fontSize="xs" color="gray.600">
+                          ID: {assignedInfo?.id || "--"}
+                        </Text>
+
+                        <Text fontSize="xs" color="gray.600">
+                          Dept: {assignedInfo?.dept || "--"}
+                        </Text>
+                      </VStack>
+                    </HStack>
+
+                    <Badge
+                      colorScheme={
+                        assignedInfo?.name === "Not Assigned" ? "red" : "green"
+                      }
+                      variant="solid"
+                      px={3}
+                      py={1}
+                      borderRadius="full"
+                      fontSize="xs"
+                    >
+                      {assignedInfo?.name === "Not Assigned"
+                        ? "Pending"
+                        : "Assigned"}
+                    </Badge>
+                  </Flex>
+              </Box>
+
               {previewFile.endsWith(".pdf") ? (
-                <iframe src={previewFile} style={{ width: "100%", height: "500px" }} title="Preview" />
+                <iframe
+                  src={previewFile}
+                  style={{ width: "100%", height: "500px" }}
+                  title="Preview"
+                />
               ) : (
                 <Image src={previewFile} alt="Preview" maxH="500px" w="full" />
               )}
               <HStack spacing={3}>
-                <Button colorScheme="blue" onClick={() => window.open(previewFile, "_blank")}>Preview</Button>
-                <Button leftIcon={<DownloadIcon />} colorScheme="green" onClick={() => downloadAttachment(previewFile)}>Download</Button>
+                <Button
+                  colorScheme="blue"
+                  onClick={() => window.open(previewFile, "_blank")}
+                >
+                  Preview
+                </Button>
+                <Button
+                  leftIcon={<DownloadIcon />}
+                  colorScheme="green"
+                  onClick={() => downloadAttachment(previewFile)}
+                >
+                  Download
+                </Button>
               </HStack>
             </VStack>
           </ModalBody>
@@ -644,12 +900,7 @@ export default function ComplaintList() {
       </Modal>
 
       {/* Assign Employee Modal */}
-      <Modal
-        isOpen={isAssignOpen}
-        onClose={onAssignClose}
-        isCentered
-        size="xl"
-      >
+      <Modal isOpen={isAssignOpen} onClose={onAssignClose} isCentered size="xl">
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Assign Employee</ModalHeader>
@@ -658,22 +909,48 @@ export default function ComplaintList() {
             {selectedComplaint && (
               <VStack align="stretch" spacing={6}>
                 {/* Ticket Details */}
-                <Box bg="blue.50" p={4} borderRadius="md" borderLeft="4px solid" borderColor="blue.400">
+                <Box
+                  bg="blue.50"
+                  p={4}
+                  borderRadius="md"
+                  borderLeft="4px solid"
+                  borderColor="blue.400"
+                >
                   <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                     <Box>
-                      <Text fontSize="xs" color="gray.500" fontWeight="bold" textTransform="uppercase">Ticket Number</Text>
-                      <Text fontSize="lg" fontWeight="bold" color="blue.700">{selectedComplaint.ticket_number}</Text>
+                      <Text
+                        fontSize="xs"
+                        color="gray.500"
+                        fontWeight="bold"
+                        textTransform="uppercase"
+                      >
+                        Ticket Number
+                      </Text>
+                      <Text fontSize="lg" fontWeight="bold" color="blue.700">
+                        {selectedComplaint.ticket_number}
+                      </Text>
                     </Box>
                     <Box>
-                      <Text fontSize="xs" color="gray.500" fontWeight="bold" textTransform="uppercase">Raised By</Text>
-                      <Text fontSize="lg" fontWeight="bold">{selectedComplaint.raised_by_name}</Text>
+                      <Text
+                        fontSize="xs"
+                        color="gray.500"
+                        fontWeight="bold"
+                        textTransform="uppercase"
+                      >
+                        Raised By
+                      </Text>
+                      <Text fontSize="lg" fontWeight="bold">
+                        {selectedComplaint.raised_by_name}
+                      </Text>
                     </Box>
                   </SimpleGrid>
                 </Box>
 
                 {/* Filters */}
                 <HStack>
-                  <Text fontWeight="medium" whiteSpace="nowrap" fontSize="sm">Department:</Text>
+                  <Text fontWeight="medium" whiteSpace="nowrap" fontSize="sm">
+                    Department:
+                  </Text>
                   <Select
                     placeholder="All Departments"
                     value={assignDeptFilter}
@@ -681,7 +958,9 @@ export default function ComplaintList() {
                     maxW="300px"
                   >
                     {deptOptions.map((dept) => (
-                      <option key={dept} value={dept}>{dept}</option>
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
                     ))}
                   </Select>
                 </HStack>
@@ -690,7 +969,11 @@ export default function ComplaintList() {
                 <Box position="relative">
                   <InputGroup>
                     <InputLeftElement pointerEvents="none">
-                      {isSearchingEmployees ? <Spinner size="xs" /> : <SearchIcon color="gray.300" />}
+                      {isSearchingEmployees ? (
+                        <Spinner size="xs" />
+                      ) : (
+                        <SearchIcon color="gray.300" />
+                      )}
                     </InputLeftElement>
                     <Input
                       placeholder="Search employee by name or ID..."
@@ -707,7 +990,7 @@ export default function ComplaintList() {
                   </InputGroup>
 
                   {/* Search Results Dropdown */}
-                  {!selectedEmployeeId && (searchResults.length > 0 || searchTerm || assignDeptFilter) && (
+                  {searchResults.length > 0 && (
                     <List
                       position="absolute"
                       top="100%"
@@ -741,15 +1024,26 @@ export default function ComplaintList() {
                             <HStack spacing={3}>
                               <Avatar size="sm" name={emp.employee_name} />
                               <Box>
-                                <Text fontSize="sm" fontWeight="bold" color="gray.700">{emp.employee_name}</Text>
-                                <Text fontSize="xs" color="gray.500">{emp.department} • {emp.designation} • ID: {emp.employee_id}</Text>
+                                <Text
+                                  fontSize="sm"
+                                  fontWeight="bold"
+                                  color="gray.700"
+                                >
+                                  {emp.employee_name}
+                                </Text>
+                                <Text fontSize="xs" color="gray.500">
+                                  {emp.department} • {emp.designation} • ID:{" "}
+                                  {emp.employee_id}
+                                </Text>
                               </Box>
                             </HStack>
                           </ListItem>
                         ))
                       ) : (
                         <ListItem p={4} textAlign="center">
-                          <Text fontSize="sm" color="gray.500">No employees found.</Text>
+                          <Text fontSize="sm" color="gray.500">
+                            No employees found.
+                          </Text>
                         </ListItem>
                       )}
                     </List>
@@ -758,23 +1052,41 @@ export default function ComplaintList() {
 
                 {/* Selected Employee Card */}
                 {selectedEmployeeId && (
-                  <Box p={4} borderWidth="1px" borderRadius="lg" bg="purple.50" borderColor="purple.200">
+                  <Box
+                    p={4}
+                    borderWidth="1px"
+                    borderRadius="lg"
+                    bg="purple.50"
+                    borderColor="purple.200"
+                  >
                     <HStack justify="space-between">
                       <HStack spacing={4}>
-                        <Avatar size="md" name={displayEmployee?.employee_name || "Employee"} bg="purple.500" />
+                        <Avatar
+                          size="md"
+                          name={displayEmployee?.employee_name || "Employee"}
+                          bg="purple.500"
+                        />
                         <Box>
                           <Text fontWeight="bold" color="purple.800">
-                            {displayEmployee?.employee_name || `Employee ID: ${selectedEmployeeId}`}
+                            {displayEmployee?.employee_name ||
+                              `Employee ID: ${selectedEmployeeId}`}
                           </Text>
                           <Text fontSize="sm" color="purple.600">
-                            {displayEmployee ? `${displayEmployee.department} - ${displayEmployee.designation}` : "Selected for assignment"}
+                            {displayEmployee
+                              ? `${displayEmployee.department} - ${displayEmployee.designation}`
+                              : "Selected for assignment"}
                           </Text>
                         </Box>
                       </HStack>
-                      <Button size="sm" variant="ghost" colorScheme="red" onClick={() => {
-                        setSelectedEmployeeId(null);
-                        setSelectedEmployeeData(null);
-                      }}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        colorScheme="red"
+                        onClick={() => {
+                          setSelectedEmployeeId(null);
+                          setSelectedEmployeeData(null);
+                        }}
+                      >
                         Remove
                       </Button>
                     </HStack>
@@ -786,17 +1098,26 @@ export default function ComplaintList() {
 
           <ModalFooter bg="gray.50" borderBottomRadius="md">
             <Flex w="full" justify="space-between">
-              <Button colorScheme="red" variant="ghost" leftIcon={<DeleteIcon />} onClick={handleUnassign} isDisabled={isAssigning}>
-                Unassign
-              </Button>
+              {selectedComplaint?.assignment_id && (
+                <Button
+                  colorScheme="red"
+                  onClick={() =>
+                    handleUnassign(selectedComplaint.assignment_id)
+                  }
+                >
+                  Unassign
+                </Button>
+              )}
               <HStack spacing={3}>
-                <Button variant="outline" onClick={onAssignClose}>Cancel</Button>
+                <Button variant="outline" onClick={onAssignClose}>
+                  Cancel
+                </Button>
                 <Button
                   colorScheme="blue"
                   onClick={handleUpdate}
                   isLoading={isAssigning}
                 >
-                  Update
+                  {selectedComplaint?.assignment_id ? "Update" : "Assign"}
                 </Button>
               </HStack>
             </Flex>
@@ -811,10 +1132,27 @@ export default function ComplaintList() {
 function StatCard({ title, value, color, total }) {
   const percentage = Math.round((value / total) * 100);
   return (
-    <Box bg="white" p={5} borderRadius="xl" boxShadow="sm" borderTop="4px solid" borderColor={color}>
-      <Text fontSize="sm" color="gray.500">{title}</Text>
-      <Text fontSize="2xl" fontWeight="bold">{value}</Text>
-      <Progress mt={2} value={percentage} size="sm" colorScheme={color.split(".")[0]} borderRadius="md"/>
+    <Box
+      bg="white"
+      p={5}
+      borderRadius="xl"
+      boxShadow="sm"
+      borderTop="4px solid"
+      borderColor={color}
+    >
+      <Text fontSize="sm" color="gray.500">
+        {title}
+      </Text>
+      <Text fontSize="2xl" fontWeight="bold">
+        {value}
+      </Text>
+      <Progress
+        mt={2}
+        value={percentage}
+        size="sm"
+        colorScheme={color.split(".")[0]}
+        borderRadius="md"
+      />
     </Box>
   );
 }
@@ -822,12 +1160,18 @@ function StatCard({ title, value, color, total }) {
 // Status color helper
 function getStatusColor(status) {
   const normalizedStatus = status ? status.toUpperCase() : "";
-  switch(normalizedStatus) {
-    case "OPEN": return "blue";
-    case "ASSIGNED": return "purple";
-    case "IN_PROGRESS": return "orange";
-    case "RESOLVED": return "green";
-    case "CLOSED": return "gray";
-    default: return "gray";
+  switch (normalizedStatus) {
+    case "OPEN":
+      return "blue";
+    case "ASSIGNED":
+      return "purple";
+    case "IN_PROGRESS":
+      return "orange";
+    case "RESOLVED":
+      return "green";
+    case "CLOSED":
+      return "gray";
+    default:
+      return "gray";
   }
 }

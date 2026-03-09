@@ -15,7 +15,7 @@ export const getComplaintMaster = async (req, res) => {
 			data: result.rows
 		});
 
-	} catch (error) {
+	} catch (error) {	
 		console.error("Fetch Error:", error.message);
 		return res.status(500).json({ success: false, message: "Internal Server Error" });
 	}
@@ -255,9 +255,8 @@ export const deleteComplaintAttachment = async (req, res) => {
 export const getComplaintList = async (req, res) => {
 	try {
 		const query = `
-			SELECT 
+						SELECT 
 				cm.complaint_id,
-				-- cm.employee_id,
 				cm.ticket_number,
 				cm.raised_by_type,
 				cm.raised_by_name,
@@ -268,11 +267,25 @@ export const getComplaintList = async (req, res) => {
 				cm.status,
 				cm.complaint_description,
 				cm.created_at,
-				ca.file_name AS attachment_path
+
+				ca.file_name AS attachment_path,
+
+				cas.assignment_id,
+				cas.assigned_employee_id,
+				cas.assigned_department,
+				e.employee_name
 
 			FROM complaint_master cm
+
 			LEFT JOIN complaint_attachment ca
 				ON cm.complaint_id = ca.complaint_id
+
+			LEFT JOIN complaint_assignment cas
+				ON cm.complaint_id = cas.complaint_id
+
+			LEFT JOIN employee e
+				ON e.employee_id = cas.assigned_employee_id
+
 			ORDER BY cm.created_at DESC
 		`;
 
@@ -324,4 +337,253 @@ export const updateComplaintStatus = async (req, res) => {
 		console.error("Update status error:", error);
 		return res.status(500).json({ success: false, message: "Internal Server Error" });
 	}
+};
+
+
+
+
+
+export const assignComplaint = async (req, res) => {
+    let client;
+
+    try {
+        client = await pool.connect();
+        await client.query("BEGIN");
+
+        const {
+            complaint_id,
+            assigned_employee_id,
+            changed_by,
+            remarks
+        } = req.body;
+
+        // ---------------- VALIDATION ----------------
+        if (!complaint_id || isNaN(complaint_id)) {
+            await client.query("ROLLBACK");
+            return res.status(400).json({ success: false, message: "Invalid complaint_id" });
+        }
+
+        if (!assigned_employee_id || isNaN(assigned_employee_id)) {
+            await client.query("ROLLBACK");
+            return res.status(400).json({ success: false, message: "Invalid assigned_employee_id" });
+        }
+
+        // ---------------- CHECK COMPLAINT EXISTS ----------------
+        const complaintCheck = await client.query(
+            "SELECT status FROM complaint_master WHERE complaint_id = $1",
+            [complaint_id]
+        );
+
+        if (complaintCheck.rows.length === 0) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ success: false, message: "Complaint not found" });
+        }
+
+        const old_status = complaintCheck.rows[0].status || "OPEN";
+
+        // ---------------- GET EMPLOYEE DEPARTMENT ----------------
+        const empResult = await client.query(
+            "SELECT department FROM employee WHERE employee_id = $1 AND status = 'Active'",
+            [assigned_employee_id]
+        );
+
+        if (empResult.rows.length === 0) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ success: false, message: "Employee not found or inactive" });
+        }
+
+        const assigned_department = empResult.rows[0].department;
+
+        // ---------------- 1️⃣ INSERT INTO complaint_assignment ----------------
+        await client.query(
+            `
+            INSERT INTO complaint_assignment
+            (complaint_id, assigned_department, assigned_employee_id)
+            VALUES ($1, $2, $3)
+            `,
+            [complaint_id, assigned_department, assigned_employee_id]
+        );
+
+        // ---------------- 2️⃣ INSERT INTO complaint_status_history ----------------
+        await client.query(
+            `
+            INSERT INTO complaint_status_history
+            (complaint_id, old_status, new_status, changed_by, remarks)
+            VALUES ($1, $2, $3, $4, $5)
+            `,
+            [
+                complaint_id,
+                old_status,
+                "ASSIGNED",
+                changed_by,
+                remarks || `Assigned to employee ID ${assigned_employee_id}`
+            ]
+        );
+
+        // ---------------- 3️⃣ UPDATE complaint_master ----------------
+        await client.query(
+            `
+            UPDATE complaint_master
+            SET status = 'ASSIGNED',
+                assigned_to = $1
+            WHERE complaint_id = $2
+            `,
+            [assigned_employee_id, complaint_id]
+        );
+
+        await client.query("COMMIT");
+
+        return res.status(200).json({
+            success: true,
+            message: "Complaint assigned successfully"
+        });
+
+    } catch (error) {
+        if (client) await client.query("ROLLBACK");
+        console.error("Assign Error:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error" });
+    } finally {
+        if (client) client.release();
+    }
+};
+
+export const getComplaintAssignments = async (req, res) => {
+  try {
+
+    const { complaint_id } = req.params;
+
+    const result = await pool.query(`
+      SELECT 
+        c.complaint_id,
+        c.ticket_number,
+        c.status,
+        ca.assignment_id,
+        ca.assigned_employee_id,
+        e.employee_name,
+        ca.assigned_department
+      FROM complaint_master c
+      LEFT JOIN complaint_assignment ca 
+        ON c.complaint_id = ca.complaint_id
+      LEFT JOIN employee e 
+        ON ca.assigned_employee_id = e.employee_id
+      WHERE c.complaint_id = $1
+    `, [complaint_id]);
+
+    return res.json({
+      success: true,
+      data: result.rows
+    });
+
+  } catch (error) {
+
+    console.error("Fetch Assignment Error:", error);
+
+    return res.status(500).json({
+      success: false
+    });
+
+  }
+};
+
+
+export const updateComplaintAssignment = async (req, res) => {
+    let client;
+    try {
+        client = await pool.connect();
+        await client.query("BEGIN");
+
+        const { assignment_id } = req.params;
+        const { assigned_employee_id, changed_by, remarks } = req.body;
+
+        if (!assignment_id || isNaN(assignment_id))
+            return res.status(400).json({ success: false });
+
+        const emp = await client.query(
+            "SELECT department FROM employee WHERE employee_id = $1",
+            [assigned_employee_id]
+        );
+
+        if (emp.rows.length === 0)
+            return res.status(404).json({ success: false, message: "Employee not found" });
+
+        const department = emp.rows[0].department;
+
+        const result = await client.query(
+            `
+            UPDATE complaint_assignment
+            SET assigned_employee_id = $1,
+                assigned_department = $2,
+                assigned_at = CURRENT_TIMESTAMP
+            WHERE assignment_id = $3
+            RETURNING complaint_id
+            `,
+            [assigned_employee_id, department, assignment_id]
+        );
+
+        if (result.rows.length === 0)
+            return res.status(404).json({ success: false });
+
+        const complaint_id = result.rows[0].complaint_id;
+
+        await client.query(
+            `
+            UPDATE complaint_master
+            SET assigned_to = $1
+            WHERE complaint_id = $2
+            `,
+            [assigned_employee_id, complaint_id]
+        );
+
+        await client.query(
+            `
+            INSERT INTO complaint_status_history
+            (complaint_id, old_status, new_status, changed_by, remarks)
+            VALUES ($1, 'ASSIGNED', 'ASSIGNED', $2, $3)
+            `,
+            [complaint_id, changed_by, remarks || "Reassigned"]
+        );
+
+        await client.query("COMMIT");
+
+        return res.json({ success: true });
+
+    } catch (error) {
+        if (client) await client.query("ROLLBACK");
+        console.error("Update Assignment Error:", error);
+        return res.status(500).json({ success: false });
+    } finally {
+        if (client) client.release();
+    }
+}; 
+
+export const deleteComplaintAssignment = async (req, res) => {
+  const { assignment_id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT complaint_id FROM complaint_assignment WHERE assignment_id=$1",
+      [assignment_id]
+    );
+
+    if (result.rows.length === 0)
+      return res.status(404).json({ success: false, message: "Assignment not found" });
+
+    const complaint_id = result.rows[0].complaint_id;
+
+    await pool.query(
+      "DELETE FROM complaint_assignment WHERE assignment_id=$1",
+      [assignment_id]
+    );
+
+    await pool.query(
+      "UPDATE complaint_master SET status='OPEN' WHERE complaint_id=$1",
+      [complaint_id]
+    );
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
 };
