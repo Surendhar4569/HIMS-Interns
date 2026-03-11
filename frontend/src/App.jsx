@@ -18,6 +18,7 @@ import EmployeeRequest from "./pages/EmployeeRequest";
 import PatientRecords from "./pages/patientsRecords";
 import RegisterPatient from "./pages/registerPatient";
 import EmployeeDashboard from "./pages/employeeDashboard";
+import OrthopedicsForm from "./pages/OrthopedicsForm";
 
 function App() {
 
@@ -56,7 +57,10 @@ function App() {
 
         {/* Patients */}
         <Route path="patient-records" element={<ProtectedRoute><PatientRecords /></ProtectedRoute>} />
+        
         <Route path="patient-register" element={<ProtectedRoute><RegisterPatient /></ProtectedRoute>} />
+        <Route path="orthopedics-form" element={<ProtectedRoute><OrthopedicsForm /></ProtectedRoute>} />
+
 
       </Route>
 

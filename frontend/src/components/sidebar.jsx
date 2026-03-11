@@ -32,6 +32,8 @@ function Sidebar() {
     { name: "Patient Records", path: "/patient-records", icon: FaUserInjured },
     { name: "Employee Records", path: "/employee-records", icon: FaFileAlt },
     { name: "patient register", path: "/patient-register", icon: FaFileAlt },
+    { name: "OrthopedicForm", path: "/orthopedics-form", icon: FaFileAlt },
+
 
 
   ];

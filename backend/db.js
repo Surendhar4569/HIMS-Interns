@@ -55,7 +55,7 @@ async function createTables() {
 
     /* complaint_assignment */
     await con.query(`
-      CREATE TABLE IF NOT EXISTS complaint_assignment (
+       CREATE TABLE IF NOT EXISTS complaint_assignment (
         assignment_id SERIAL PRIMARY KEY,
         complaint_id INT NOT NULL,
         assigned_department VARCHAR(100) NOT NULL,
@@ -107,7 +107,7 @@ async function createTables() {
 
 
     await con.query(`
-CREATE TABLE IF NOT EXISTS patient_feedback (
+  CREATE TABLE IF NOT EXISTS patient_feedback (
   feedback_id SERIAL PRIMARY KEY,
   patient_id INT NOT NULL,
   patient_name VARCHAR(150) NOT NULL,

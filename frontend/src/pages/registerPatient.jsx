@@ -173,10 +173,7 @@ function RegisterPatient({  onSave }) {
         const token=localStorage.getItem("token")
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json",
-          headers:{
-          "Authorization": `Bearer ${token}`
-  }
+        headers: { "Content-Type": "application/json","Authorization": `Bearer ${token}`
          },
         body: JSON.stringify(formData),
       });
