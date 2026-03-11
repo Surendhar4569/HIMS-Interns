@@ -4,9 +4,6 @@ import Layout from "./components/Layout";
 import ProtectedRoute from "./pages/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
-// Login
-import EmployeeLogin from "./pages/EmployeeLogin";
-
 // Dashboard pages
 import Home from "./pages/home";
 import Complaints from "./pages/complaints";
@@ -17,6 +14,8 @@ import Employee from "./pages/employee";
 import EmployeeRequest from "./pages/EmployeeRequest";
 import PatientRecords from "./pages/patientsRecords";
 import RegisterPatient from "./pages/registerPatient";
+import EmployeeRecords from "./pages/employee"
+import EmployeeLogin from "./pages/employeeLogin";
 import EmployeeDashboard from "./pages/employeeDashboard";
 
 function App() {

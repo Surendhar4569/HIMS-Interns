@@ -162,8 +162,6 @@ export default function ComplaintList() {
     fetchEmployeesData();
   }, []);
 
-
-
   useEffect(() => {
     if (!isAssignOpen) return;
 
@@ -222,7 +220,6 @@ export default function ComplaintList() {
 
   // Update this function to take the whole complaint object
   const openAttachmentModal = (complaint) => {
-
     const path = complaint.attachment_path || complaint.file_name;
     if (!path) {
       toast({
@@ -305,8 +302,12 @@ export default function ComplaintList() {
             ? assignment.assigned_employee_id.toString()
             : null,
         );
-        setOriginalEmployeeId(assignment.assigned_employee_id.toString());
-
+        //setOriginalEmployeeId(assignment.assigned_employee_id.toString());
+        setOriginalEmployeeId(
+          assignment?.assigned_employee_id
+            ? assignment.assigned_employee_id.toString()
+            : null,
+        );
         // IMPORTANT: store assignment_id
         setCurrentAssignment(assignment);
 
@@ -360,18 +361,17 @@ export default function ComplaintList() {
         : "http://localhost:3000/complaints/post-complaint-assigned";
 
       const method = isUpdate ? "PUT" : "POST";
+      const employeeName = localStorage.getItem("employee_name");
 
       const bodyData = isUpdate
         ? {
             assigned_employee_id: parseInt(selectedEmployeeId, 10),
-            changed_by: 100,
-            remarks: "Updated from UI",
+            changed_by: employeeName,
           }
         : {
             complaint_id: selectedComplaint.complaint_id,
             assigned_employee_id: parseInt(selectedEmployeeId, 10),
-            changed_by: 100,
-            remarks: "Assigned from UI",
+            changed_by: employeeName,
           };
 
       console.log("API:", url);
@@ -891,50 +891,46 @@ export default function ComplaintList() {
                 borderColor="blue.100"
               >
                 <Flex
-                    justify="space-between"
-                    align="center"
-                    p={3}
-                    borderWidth="1px"
-                    borderRadius="md"
-                    bg="gray.50"
+                  justify="space-between"
+                  align="center"
+                  p={3}
+                  borderWidth="1px"
+                  borderRadius="md"
+                  bg="gray.50"
+                >
+                  <HStack spacing={3}>
+                    <Avatar size="sm" name={assignedInfo?.name} bg="blue.500" />
+
+                    <VStack align="start" spacing={0}>
+                      <Text fontSize="sm" fontWeight="semibold">
+                        {assignedInfo?.name || "Not Assigned"}
+                      </Text>
+
+                      <Text fontSize="xs" color="gray.600">
+                        ID: {assignedInfo?.id || "--"}
+                      </Text>
+
+                      <Text fontSize="xs" color="gray.600">
+                        Dept: {assignedInfo?.dept || "--"}
+                      </Text>
+                    </VStack>
+                  </HStack>
+
+                  <Badge
+                    colorScheme={
+                      assignedInfo?.name === "Not Assigned" ? "red" : "green"
+                    }
+                    variant="solid"
+                    px={3}
+                    py={1}
+                    borderRadius="full"
+                    fontSize="xs"
                   >
-                    <HStack spacing={3}>
-                      <Avatar
-                        size="sm"
-                        name={assignedInfo?.name}
-                        bg="blue.500"
-                      />
-
-                      <VStack align="start" spacing={0}>
-                        <Text fontSize="sm" fontWeight="semibold">
-                          {assignedInfo?.name || "Not Assigned"}
-                        </Text>
-
-                        <Text fontSize="xs" color="gray.600">
-                          ID: {assignedInfo?.id || "--"}
-                        </Text>
-
-                        <Text fontSize="xs" color="gray.600">
-                          Dept: {assignedInfo?.dept || "--"}
-                        </Text>
-                      </VStack>
-                    </HStack>
-
-                    <Badge
-                      colorScheme={
-                        assignedInfo?.name === "Not Assigned" ? "red" : "green"
-                      }
-                      variant="solid"
-                      px={3}
-                      py={1}
-                      borderRadius="full"
-                      fontSize="xs"
-                    >
-                      {assignedInfo?.name === "Not Assigned"
-                        ? "Pending"
-                        : "Assigned"}
-                    </Badge>
-                  </Flex>
+                    {assignedInfo?.name === "Not Assigned"
+                      ? "Pending"
+                      : "Assigned"}
+                  </Badge>
+                </Flex>
               </Box>
 
               {previewFile.endsWith(".pdf") ? (
