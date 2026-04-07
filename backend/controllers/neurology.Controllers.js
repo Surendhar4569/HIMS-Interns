@@ -5,14 +5,13 @@ import db from "../db.js"; // Adjust based on your DB connection
 export const createEncounter = async (req, res) => {
   try {
     const { patient_id, encounter_date, visit_id, ...encounterData } = req.body;
-    
 
     const result = await db.query(
       `INSERT INTO neurology_encounters 
             (patient_id, encounter_date,visit_id) 
             VALUES ($1, $2, $3)
             RETURNING encounter_id`,
-      [patient_id, encounter_date || new Date(),  visit_id],
+      [patient_id, encounter_date || new Date(), visit_id],
     );
 
     res.status(201).json({
@@ -196,8 +195,6 @@ export const getEncounterById = async (req, res) => {
 // backend/controllers/neurology.Controllers.js
 
 export const getFullEncounterDetails = async (req, res) => {
- 
-
   try {
     const { encounterId } = req.params;
 
@@ -222,14 +219,12 @@ export const getFullEncounterDetails = async (req, res) => {
       `SELECT * FROM neurology_complaints WHERE encounter_id = $1`,
       [encounterId],
     );
-    
 
     // 3. Get headache data
     const headache = await db.query(
       `SELECT * FROM neurology_headache WHERE encounter_id = $1`,
       [encounterId],
     );
-    
 
     // 4. Get seizures data
     const seizures = await db.query(
@@ -248,7 +243,6 @@ export const getFullEncounterDetails = async (req, res) => {
       `SELECT * FROM neurology_imaging WHERE encounter_id = $1`,
       [encounterId],
     );
-    
 
     // 7. Get electrophysiology data
     const electrophysiology = await db.query(
@@ -267,7 +261,7 @@ export const getFullEncounterDetails = async (req, res) => {
       `SELECT * FROM neurology_analysis WHERE encounter_id = $1`,
       [encounterId],
     );
-    
+
     // 10. Get diagnoses data
     const diagnoses = await db.query(
       `SELECT * FROM neurology_diagnoses WHERE encounter_id = $1 ORDER BY diagnosis_type`,
@@ -349,7 +343,7 @@ export const updateEncounter = async (req, res) => {
 
     try {
       await client.query("BEGIN");
-    
+
       // ============================================
       // 1. UPDATE neurology_encounters table
       // ============================================
@@ -376,13 +370,10 @@ export const updateEncounter = async (req, res) => {
         }
       });
 
-     
-
       if (Object.keys(encounterUpdate).length > 0) {
         const setClause = Object.keys(encounterUpdate)
           .map((key, idx) => `${key} = $${idx + 1}`)
           .join(", ");
-        
 
         const values = [...Object.values(encounterUpdate), encounterId];
 
@@ -736,12 +727,14 @@ export const updateEncounter = async (req, res) => {
       // ============================================
       // 8. UPDATE neurology_labs table
       // ============================================
+
       const labsFields = [
         "cbc_results",
         "electrolyte_results",
         "thyroid_results",
         "esr_crp_results",
         "autoimmune_results",
+        "lab_tests", // added
       ];
 
       const labsUpdate = {};
@@ -758,19 +751,27 @@ export const updateEncounter = async (req, res) => {
         );
 
         if (checkResult.rows.length === 0) {
+          // INSERT
           const insertFields = Object.keys(labsUpdate);
           const insertValues = [encounterId, ...Object.values(labsUpdate)];
           const placeholders = insertFields
-            .map((_, idx) => `$${idx + 2}`)
+            .map((field, idx) => {
+              if (field === "lab_tests") return `$${idx + 2}::text[]`;
+              return `$${idx + 2}`;
+            })
             .join(", ");
           await client.query(
             `INSERT INTO neurology_labs (encounter_id, ${insertFields.join(", ")}) 
-                         VALUES ($1, ${placeholders})`,
+       VALUES ($1, ${placeholders})`,
             insertValues,
           );
         } else {
+          // UPDATE
           const setClause = Object.keys(labsUpdate)
-            .map((key, idx) => `${key} = $${idx + 1}`)
+            .map((key, idx) => {
+              if (key === "lab_tests") return `${key} = $${idx + 1}::text[]`;
+              return `${key} = $${idx + 1}`;
+            })
             .join(", ");
           const values = [...Object.values(labsUpdate), encounterId];
           await client.query(
@@ -888,7 +889,7 @@ export const updateEncounter = async (req, res) => {
             values,
           );
         }
-       }
+      }
 
       // ============================================
       // 11. UPDATE neurology_notes table
@@ -935,7 +936,7 @@ export const updateEncounter = async (req, res) => {
             values,
           );
         }
-       }
+      }
       // ============================================
       // 12. UPDATE neurology_diagnoses table
       // ============================================
@@ -1033,7 +1034,6 @@ export const updateEncounter = async (req, res) => {
              VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
             [encounterId, "secondary", updates.secondary_diagnosis],
           );
-          
         } else {
           // Update existing secondary diagnosis
           await client.query(
@@ -1102,7 +1102,7 @@ export const updateEncounter = async (req, res) => {
             );
           }
         }
-       }
+      }
 
       // ============================================
       // 14. UPDATE neurology_referrals table
@@ -1124,12 +1124,10 @@ export const updateEncounter = async (req, res) => {
             );
           }
         }
-       }
+      }
 
-      
       await client.query("COMMIT");
 
-      
       res.json({
         success: true,
         message: "Encounter updated successfully",
@@ -1878,10 +1876,8 @@ export const updateReferrals = async (req, res) => {
 export const submitCompleteForm = async (req, res) => {
   try {
     //const data = req.body;
-   
+
     const data = req.body;
-    
-   
 
     // First create the encounter
     const encounterResult = await db.query(

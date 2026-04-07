@@ -373,9 +373,6 @@ export default function ComplaintList() {
             assigned_employee_id: parseInt(selectedEmployeeId, 10),
             changed_by: employeeId,
           };
-
-      console.log("API:", url);
-      console.log("Body:", bodyData);
        const token=localStorage.getItem("token")
       const response = await fetch(url, {
         method: method,
