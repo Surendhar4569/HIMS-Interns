@@ -15,8 +15,10 @@ import EmployeeRequest from "./pages/EmployeeRequest";
 import PatientRecords from "./pages/patientsRecords";
 import RegisterPatient from "./pages/registerPatient";
 import EmployeeRecords from "./pages/employee"
-import EmployeeLogin from "./pages/employeeLogin";
+import EmployeeLogin from "./pages/EmployeeLogin";
 import EmployeeDashboard from "./pages/employeeDashboard";
+import NeurologyForm from "./pages/NeurologyForm";
+import NeurologyRecords from "./pages/neurologyRecords";
 
 function App() {
 
@@ -56,6 +58,8 @@ function App() {
         {/* Patients */}
         <Route path="patient-records" element={<ProtectedRoute><PatientRecords /></ProtectedRoute>} />
         <Route path="patient-register" element={<ProtectedRoute><RegisterPatient /></ProtectedRoute>} />
+        <Route path="/NeurologyForm" element={<ProtectedRoute><NeurologyForm /></ProtectedRoute>} />
+        <Route path="/neurologyRecords" element={<ProtectedRoute><NeurologyRecords /></ProtectedRoute>} />
 
       </Route>
 

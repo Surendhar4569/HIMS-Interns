@@ -18,9 +18,10 @@ import {
   Icon,
   Avatar,
   useToast,
+  Badge,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import { FiLogOut, FiInbox, FiClipboard, FiLayers } from "react-icons/fi";
+import { FiLogOut, FiClipboard, FiLayers } from "react-icons/fi";
 
 function EmployeeDashboard() {
   const [complaints, setComplaints] = useState([]);
@@ -31,7 +32,7 @@ function EmployeeDashboard() {
   const employeeId = localStorage.getItem("employee_id");
   const employeeName = localStorage.getItem("employee_name");
 
-  // Increased column widths
+  // Column layout constants
   const COLUMN_WIDTHS = {
     id: "120px",
     status: "240px",
@@ -52,7 +53,7 @@ function EmployeeDashboard() {
       .then((data) => {
         if (data.success) {
           setComplaints(
-            [...data.data].sort((a, b) => b.complaint_id - a.complaint_id),
+            [...data.data].sort((a, b) => b.complaint_id - a.complaint_id)
           );
         }
       })
@@ -64,6 +65,22 @@ function EmployeeDashboard() {
           position: "top-right",
         });
       });
+  };
+
+  const handleLogOut = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("employee_id");
+    localStorage.removeItem("employee_name");
+
+    toast({
+      title: "Logged out successfully",
+      description: "Your session has been ended",
+      status: "success",
+      position: "top-right",
+      duration: 3000,
+      isClosable: true,
+    });
+    navigate("/login");
   };
 
   const updateStatus = async (id, newStatus, oldStatus, remarks) => {
@@ -86,10 +103,10 @@ function EmployeeDashboard() {
           body: JSON.stringify({
             old_status: oldStatus,
             new_status: newStatus,
-            employee_name: employeeName,
+            changed_by: employeeId,
             remarks: remarks || "",
           }),
-        },
+        }
       );
 
       const data = await res.json();
@@ -111,9 +128,9 @@ function EmployeeDashboard() {
                     tempStatus: undefined,
                     remarks: "",
                   }
-                : c,
+                : c
             )
-            .sort((a, b) => b.complaint_id - a.complaint_id),
+            .sort((a, b) => b.complaint_id - a.complaint_id)
         );
       }
     } catch (error) {
@@ -152,7 +169,7 @@ function EmployeeDashboard() {
               spacing={0}
               display={{ base: "none", md: "flex" }}
             >
-              <Text fontSize="sm" fontWeight="700" color="gray.700">
+              <Text fontSize="lg" fontWeight="700" color="gray.700">
                 {employeeName}
               </Text>
             </VStack>
@@ -165,9 +182,9 @@ function EmployeeDashboard() {
           </HStack>
           <Button
             rightIcon={<FiLogOut />}
-            size="sm"
+            size="lg"
             variant="ghost"
-            onClick={() => navigate("/login")}
+            onClick={handleLogOut}
           >
             Logout
           </Button>
@@ -206,7 +223,11 @@ function EmployeeDashboard() {
                   Status Transition
                 </Th>
                 <Th color="white">Remarks</Th>
-                <Th width={COLUMN_WIDTHS.action} color="white" textAlign="center">
+                <Th
+                  width={COLUMN_WIDTHS.action}
+                  color="white"
+                  textAlign="center"
+                >
                   Execution
                 </Th>
               </Tr>
@@ -241,27 +262,44 @@ function EmployeeDashboard() {
                     </Td>
 
                     <Td>
-                      <Select
-                        size="md"
-                        h="44px"
-                        fontSize="sm"
-                        borderRadius="md"
-                        value={c.tempStatus || c.status}
-                        onChange={(e) => {
-                          const updated = complaints.map((item) =>
-                            item.complaint_id === c.complaint_id
-                              ? { ...item, tempStatus: e.target.value }
-                              : item,
-                          );
-                          setComplaints(updated);
-                        }}
-                      >
-                        {statusList.map((s, idx) => (
-                          <option key={s} value={s} disabled={idx < currentIndex}>
-                            {s}
-                          </option>
-                        ))}
-                      </Select>
+                      {c.status === "CLOSED" ? 
+                        <Badge
+                          colorScheme="red"
+                          fontSize="0.8em"
+                          px={3}
+                          py={1}
+                          borderRadius="md"
+                        >
+                          CLOSED
+                        </Badge>
+                       : (
+                        <Select
+                          size="md"
+                          h="44px"
+                          fontSize="sm"
+                          borderRadius="md"
+                          value={c.tempStatus || c.status}
+                          onChange={(e) => {
+                            const newStatus = e.target.value;
+                            const updated = complaints.map((item) =>
+                              item.complaint_id === c.complaint_id
+                                ? { ...item, tempStatus: newStatus }
+                                : item
+                            );
+                            setComplaints(updated);
+                          }}
+                        >
+                          {statusList.map((s, idx) => (
+                            <option
+                              key={s}
+                              value={s}
+                              disabled={idx < currentIndex}
+                            >
+                              {s}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
                     </Td>
 
                     <Td>
@@ -275,7 +313,7 @@ function EmployeeDashboard() {
                           const updated = complaints.map((item) =>
                             item.complaint_id === c.complaint_id
                               ? { ...item, remarks: e.target.value }
-                              : item,
+                              : item
                           );
                           setComplaints(updated);
                         }}
@@ -296,7 +334,7 @@ function EmployeeDashboard() {
                             c.complaint_id,
                             c.tempStatus,
                             c.status,
-                            c.remarks,
+                            c.remarks
                           )
                         }
                       >

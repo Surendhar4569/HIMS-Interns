@@ -361,17 +361,17 @@ export default function ComplaintList() {
         : "http://localhost:3000/complaints/post-complaint-assigned";
 
       const method = isUpdate ? "PUT" : "POST";
-      const employeeName = localStorage.getItem("employee_name");
+      const employeeId = localStorage.getItem("employee_id");
 
       const bodyData = isUpdate
         ? {
             assigned_employee_id: parseInt(selectedEmployeeId, 10),
-            changed_by: employeeName,
+            changed_by: employeeId,
           }
         : {
             complaint_id: selectedComplaint.complaint_id,
             assigned_employee_id: parseInt(selectedEmployeeId, 10),
-            changed_by: employeeName,
+            changed_by: employeeId,
           };
 
       console.log("API:", url);

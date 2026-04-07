@@ -97,7 +97,7 @@ export const registerPatient = async (req, res) => {
 
   } catch (error) {
 
-    // Handle duplicate email (PostgreSQL unique violation)
+    // Handle duplicate email 
     if (error.code === "23505") {
       return res.status(409).json({
         success: false,

@@ -13,7 +13,6 @@ import {
   Icon,
 } from "@chakra-ui/react";
 import { useNavigate, useLocation } from "react-router-dom";
-// Optional: Icons for a more professional look
 import { FiUser, FiLock } from "react-icons/fi";
 
 function EmployeeLogin() {
@@ -85,7 +84,7 @@ function EmployeeLogin() {
         <Box
           w={{ base: "0%", md: "40%" }}
           bg="#1A365D" // Classic Navy Blue
-          p={10}
+          p={0}
           color="white"
           display="flex"
           flexDirection="column"
