@@ -25,7 +25,7 @@ function EmployeeLogin() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || "/employee-dashboard";
+  const from = location.state?.from?.pathname || "/home";
 
   const handleLogin = async () => {
     if (!name || !password) {

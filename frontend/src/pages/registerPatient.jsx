@@ -159,44 +159,46 @@ function RegisterPatient({  onSave }) {
     setErrors({});
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!validate()) return;
+  if (!validate()) return;
 
-    const url = editId
-      ? `http://localhost:3000/patient/updatePatient/${editId}`
-      : "http://localhost:3000/patient/registerPatient";
-    const method = editId ? "PUT" : "POST";
-    try {
-      setLoading(true);
-        const token=localStorage.getItem("token")
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json",
-          headers:{
-          "Authorization": `Bearer ${token}`
-  }
-         },
-        body: JSON.stringify(formData),
-      });
-if (res.status === 401) {
+  const url = editId
+    ? `http://localhost:3000/patient/updatePatient/${editId}`
+    : "http://localhost:3000/patient/registerPatient";
+  const method = editId ? "PUT" : "POST";
+  
+  try {
+    setLoading(true);
+    const token = localStorage.getItem("token");
+    const res = await fetch(url, {
+      method,
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(formData),
+    });
 
-  localStorage.removeItem("token");
-  localStorage.removeItem("employee_id");
-  localStorage.removeItem("employee_name");
+    if (res.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("employee_id");
+      localStorage.removeItem("employee_name");
+      navigate("/login");
+      return;
+    }
 
-  navigate("/login");
-  return;
-}
+    const result = await res.json();
 
-      const result = await res.json();
-
+    // Check if the response was successful (status 200-299)
+    if (res.ok) {
       toast({
         title: editId ? "Updated Successfully" : "Registered Successfully",
         status: "success",
         duration: 2000,
       });
+
       if (editId) {
         setPatients((prev) =>
           prev.map((p) =>
@@ -204,25 +206,41 @@ if (res.status === 401) {
           )
         );
       } else {
-        setPatients((prev) => [result.data, ...prev]);
+        // Only try to access result.data if it exists
+        if (result.data) {
+          setPatients((prev) => [result.data, ...prev]);
+        } else {
+          fetchPatients(); // Fallback to fetching all patients
+        }
       }
-
 
       if (result?.data && typeof onSave === "function") {
         onSave(result.data, !!editId);
       }
 
-      if (!editId) {
-        fetchPatients();
-      }
-
       resetForm();
-    } catch (err) {
-      toast({ title: "Operation Failed", status: "error", description: err });
-    } finally {
-      setLoading(false);
+    } else {
+      // Handle error responses (including 409 Conflict)
+      toast({
+        title: "Registration Failed",
+        description: result.message || "Email already exists or invalid data",
+        status: "error",
+        duration: 3000,
+      });
+      
+      // Don't update the patients list on error
+      // Don't reset the form so user can correct the issue
     }
-  };
+  } catch (err) {
+    toast({ 
+      title: "Operation Failed", 
+      status: "error", 
+      description: err.message || "An unexpected error occurred" 
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleEdit = (patient) => {
     setFormData({

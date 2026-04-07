@@ -17,12 +17,14 @@ import {
   useToast,
   HStack,
   Badge,
+  InputGroup,
+  InputLeftElement,
 } from "@chakra-ui/react";
-import { AttachmentIcon } from "@chakra-ui/icons";
+import { AttachmentIcon, PhoneIcon } from "@chakra-ui/icons";
 import { useNavigate } from "react-router-dom";
 
 export default function Complaints() {
-  const navigate=useNavigate()
+  const navigate = useNavigate();
   const toast = useToast();
   const [fileKey, setFileKey] = useState(Date.now());
 
@@ -30,6 +32,7 @@ export default function Complaints() {
     ticket_number: "",
     raised_by_type: "",
     raised_by_name: "",
+    raised_by_mobile: "", 
     category: "",
     sub_category: "",
     department: "",
@@ -63,6 +66,13 @@ export default function Complaints() {
     let newErrors = {};
     if (!formData.raised_by_type) newErrors.raised_by_type = "Required";
     if (!formData.raised_by_name) newErrors.raised_by_name = "Required";
+    
+    // Validate phone number
+    if (!formData.raised_by_mobile) {
+      newErrors.raised_by_mobile = "Mobile number is required";
+    } else if (!/^[0-9]{10}$/.test(formData.raised_by_mobile)) {
+      newErrors.raised_by_mobile = "Please enter a valid 10-digit mobile number";
+    }
 
     if (formData.raised_by_type === "EMPLOYEE") {
       if (!formData.category) newErrors.category = "Required";
@@ -89,26 +99,42 @@ export default function Complaints() {
     try {
       const data = new FormData();
       Object.keys(formData).forEach((key) => {
-        if (key !== "attachment_path" && formData[key] !== null) data.append(key, formData[key]);
+        if (key !== "attachment_path" && formData[key] !== null) 
+          data.append(key, formData[key]);
       });
-      if (formData.attachment_path) data.append("attachment_path", formData.attachment_path);
-      const token=localStorage.getItem("token")
+      if (formData.attachment_path) 
+        data.append("attachment_path", formData.attachment_path);
+          // Check if user is a patient
+    const userRole = localStorage.getItem("user_role");
+    const patientId = localStorage.getItem("patient_id");
+    
+    // If patient is logged in, add patient_id to the form data
+    if (userRole === "patient" && patientId) {
+      data.append("patient_id", patientId);
+    }
+
+      const token = localStorage.getItem("token");
       const response = await fetch(
         "http://localhost:3000/complaints/postComplaintMaster",
-        { method: "POST", body: data,
-          headers:{
-          "Authorization": `Bearer ${token}`
-  } }
+        { 
+          method: "POST", 
+          body: data,
+          headers: {
+            "Authorization": `Bearer ${token}`
+          } 
+        }
       );
+      
       if (response.status === 401) {
-
-  localStorage.removeItem("token");
-  localStorage.removeItem("employee_id");
-  localStorage.removeItem("employee_name");
-
-  navigate("/login");
-  return;
-}
+        localStorage.removeItem("token");
+        localStorage.removeItem("employee_id");
+        localStorage.removeItem("employee_name");
+          localStorage.removeItem("patient_id");
+      localStorage.removeItem("patient_name");
+      localStorage.removeItem("user_role");
+        navigate("/login");
+        return;
+      }
 
       const result = await response.json();
 
@@ -124,6 +150,7 @@ export default function Complaints() {
           ticket_number: "",
           raised_by_type: "",
           raised_by_name: "",
+          raised_by_mobile: "", // Reset phone number
           category: "",
           sub_category: "",
           department: "",
@@ -170,7 +197,7 @@ export default function Complaints() {
             <VStack spacing={6} align="stretch">
               <Input type="hidden" name="ticket_number" value={formData.ticket_number} onChange={handleChange} />
 
-              {/* Raised By */}
+              {/* Raised By Type and Name */}
               <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
                 <GridItem>
                   <FormControl isRequired isInvalid={!!errors.raised_by_type}>
@@ -207,6 +234,31 @@ export default function Complaints() {
                   </FormControl>
                 </GridItem>
               </Grid>
+
+              {/* Phone Number Field - Added */}
+              <FormControl isRequired isInvalid={!!errors.raised_by_mobile}>
+                <FormLabel>Mobile Number</FormLabel>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <PhoneIcon color="gray.300" />
+                  </InputLeftElement>
+                  <Input
+                    name="raised_by_mobile"
+                    type="tel"
+                    value={formData.raised_by_mobile}
+                    onChange={handleChange}
+                    placeholder="Enter 10-digit mobile number"
+                    maxLength={10}
+                    focusBorderColor="blue.400"
+                    borderRadius="md"
+                    boxShadow="sm"
+                  />
+                </InputGroup>
+                <FormErrorMessage>{errors.raised_by_mobile}</FormErrorMessage>
+                <Text fontSize="xs" color="gray.500" mt={1}>
+                  OTP will be sent to this number for complaint closure
+                </Text>
+              </FormControl>
 
               {/* Employee Fields */}
               {formData.raised_by_type === "EMPLOYEE" && (
@@ -308,7 +360,7 @@ export default function Complaints() {
                 <FormErrorMessage>{errors.complaint_description}</FormErrorMessage>
               </FormControl>
 
-              {/* Attachment (Compact Button) */}
+              {/* Attachment */}
               <FormControl isRequired isInvalid={!!errors.attachment_path}>
                 <FormLabel>Attachment</FormLabel>
                 <Box>

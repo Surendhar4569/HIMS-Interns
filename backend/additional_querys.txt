@@ -1,0 +1,26 @@
+/* Add attachment_type column to complaint_attachment */
+await con.query(`
+  ALTER TABLE complaint_attachment 
+  ADD COLUMN IF NOT EXISTS attachment_type VARCHAR(20) DEFAULT 'BEFORE'
+  CHECK (attachment_type IN ('BEFORE', 'AFTER'));
+`);
+ALTER TABLE complaint_master 
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+CREATE INDEX IF NOT EXISTS idx_complaint_master_updated_at ON complaint_master(updated_at);
+
+ALTER TABLE complaint_master 
+ADD COLUMN IF NOT EXISTS raised_by_mobile VARCHAR(15);
+CREATE INDEX IF NOT EXISTS idx_complaint_master_mobile ON complaint_master(raised_by_mobile);
+
+
+ALTER TABLE complaint_master ADD COLUMN patient_id INTEGER REFERENCES patient(patient_id);
+
+
+
+ALTER TABLE complaint_master 
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+  
+ALTER TABLE complaint_closure_feedback 
+ALTER COLUMN submitted_at SET DEFAULT CURRENT_TIMESTAMP;

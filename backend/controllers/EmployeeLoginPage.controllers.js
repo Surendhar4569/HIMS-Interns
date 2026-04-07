@@ -2,9 +2,7 @@ import con from "../db.js";
 import jwt from "jsonwebtoken";
 
 export const employeeLogin = async (req, res) => {
-
   try {
-
     const { employee_name, password } = req.body;
 
     if (!employee_name || !password) {
@@ -39,8 +37,9 @@ export const employeeLogin = async (req, res) => {
 
     const token = jwt.sign(
       {
-        employee_id: employee.employee_id,
-        employee_name: employee.employee_name
+        employee_id: employee.employee_id,  // Consistent field name
+        name: employee.employee_name,        // Added name field
+        role: "employee"
       },
       process.env.JWT_SECRET,
       { expiresIn: "24h" }
@@ -51,19 +50,16 @@ export const employeeLogin = async (req, res) => {
       message: "Login successful",
       token,
       employee: {
-    employee_id: employee.employee_id,
-    employee_name: employee.employee_name
-  }
+        employee_id: employee.employee_id,
+        employee_name: employee.employee_name
+      }
     });
 
   } catch (error) {
-
     console.error(error);
-
     res.status(500).json({
       success: false,
       message: "Server error"
     });
-
   }
 };
