@@ -13,6 +13,9 @@ import EmployeeDashboardRouter from "./routes/employeeDashboard.Routes.js"
 // import complaintAssginedRouter from "./routes/complaint_assigned.Routes.js"
 // import complaintAssginedRouter from "./routes/complaint_assigned.Routes.js"
 import EmployeeLoginRouter from "./routes/EmployeeLogin.Routes.js"
+import neurologyRouter from "./routes/neurology.Routes.js";
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -20,7 +23,7 @@ const PORT = process.env.PORT || 3000;
 app.use(
   cors({
     origin: "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
   })
 );
@@ -44,6 +47,7 @@ app.use("/",EmployeeLoginRouter)
 app.use("/employee-dashboard",EmployeeDashboardRouter)
 // app.use("/complaint-assigned", complaintAssginedRouter)
 app.use("/employee-login", EmployeeLoginRouter)
+app.use("/neurology", neurologyRouter);
 app.use((req,res)=>{
   res.status(404).json({
     success:false,

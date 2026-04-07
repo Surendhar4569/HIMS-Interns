@@ -49,7 +49,7 @@ WHERE ca.assigned_employee_id = $1
 export const updateComplaintStatus = async (req, res) => {
   try {
     const { complaint_id } = req.params;
-    const { old_status, new_status, employee_name,remarks } = req.body;
+    const { old_status, new_status, changed_by,remarks } = req.body;
 
 
     await con.query(
@@ -63,7 +63,7 @@ export const updateComplaintStatus = async (req, res) => {
       `INSERT INTO complaint_status_history
        (complaint_id, old_status, new_status, changed_by,remarks)
        VALUES ($1, $2, $3, $4, $5)`,
-      [complaint_id, old_status, new_status, employee_name, remarks],
+      [complaint_id, old_status, new_status, changed_by, remarks],
     );
 
     return res.status(200).json({

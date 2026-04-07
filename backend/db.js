@@ -28,7 +28,6 @@ con
 
 async function createTables() {
   try {
-
     /* complaint_master */
     await con.query(`
       CREATE TABLE IF NOT EXISTS complaint_master (
@@ -173,6 +172,409 @@ async function createTables() {
       );
     `);
 
+
+    
+    // neurology_encounters
+    await con.query(`
+      CREATE TABLE IF NOT EXISTS neurology_encounters (
+  encounter_id SERIAL PRIMARY KEY,
+  patient_id INT NOT NULL,
+  encounter_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_by INT,
+
+  height_cm NUMERIC(5,2),
+  weight_kg NUMERIC(5,2),
+  bmi NUMERIC(6,2),
+
+  allergies TEXT,
+  past_medical_history TEXT,
+  past_surgical_history TEXT,
+  family_history TEXT,
+  social_history TEXT,
+
+  occupation TEXT,
+  smoking_status TEXT,
+  alcohol_use TEXT,
+  lifestyle TEXT,
+
+  visit_id VARCHAR(50),
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+`);
+
+
+
+    //neurology_complaints
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_complaints (
+  complaint_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  chief_complaint TEXT,
+  onset_date DATE,
+  duration TEXT,
+  progression TEXT,
+
+  weakness_present VARCHAR(10),
+  weakness_side VARCHAR(20),
+  weakness_pattern VARCHAR(50),
+  weakness_limb TEXT,
+
+  numbness TEXT,
+  paresthesia TEXT,
+  tremors TEXT,
+  involuntary_movements TEXT,
+
+  speech_changes TEXT,
+  language_changes TEXT,
+  vision_changes TEXT,
+
+  dizziness TEXT,
+  vertigo TEXT,
+  balance_issues TEXT,
+
+  cognitive_changes TEXT,
+  memory_changes TEXT,
+
+  neuropathic_pain TEXT,
+  radicular_pain TEXT,
+
+  symptom_triggers TEXT,
+  symptom_relievers TEXT,
+  overall_severity INT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+    //neurology_headache
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_headache (
+  headache_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  headache_type TEXT,
+  headache_location TEXT,
+  headache_severity INT,
+  headache_triggers TEXT,
+  headache_duration TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+    //neurology_seizures
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_seizures (
+  seizure_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  seizures_present VARCHAR(10),
+  seizure_type TEXT,
+  seizure_frequency TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+
+    //neurology_exam
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_neuro_exam (
+  exam_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  mental_status_orientation TEXT,
+  memory_registration TEXT,
+  memory_recall TEXT,
+  cognition TEXT,
+
+  cranial_nerve_findings TEXT,
+
+  motor_tone TEXT,
+  motor_power TEXT,
+  muscle_bulk TEXT,
+
+  reflexes_biceps TEXT,
+  reflexes_triceps TEXT,
+  reflexes_knee TEXT,
+  reflexes_ankle TEXT,
+
+  plantar_response TEXT,
+
+  sensory_pain TEXT,
+  sensory_temperature TEXT,
+  sensory_vibration TEXT,
+  sensory_proprioception TEXT,
+
+  coordination_finger_nose TEXT,
+  coordination_heel_shin TEXT,
+
+  gait TEXT,
+  romberg_test TEXT,
+  tandem_walk TEXT,
+
+  babinski TEXT,
+  hoffmann TEXT,
+  lhermitte TEXT,
+
+  adls TEXT,
+  mobility TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+    //imaging
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_imaging (
+  imaging_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  ct_brain TEXT,
+  mri_brain TEXT,
+  mr_angiography TEXT,
+  mri_spine TEXT,
+  lumbar_puncture TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+    //neurology_analysis
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_analysis (
+  analysis_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  mri_findings TEXT,
+  mr_angio_findings TEXT,
+  eeg_results TEXT,
+  ncs_results TEXT,
+  comparison_previous TEXT,
+
+  genetic_testing TEXT,
+  metabolic_panel TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+    //neurology_diagnoses
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_diagnoses (
+  diagnosis_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  diagnosis_type TEXT,
+  diagnosis_name TEXT,
+  icd10_code TEXT,
+  disease_classification TEXT,
+  severity TEXT,
+  stage TEXT,
+  comorbidities TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+    //neurology_management
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_management (
+  management_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  pain_management TEXT,
+  spasticity_management TEXT,
+  seizure_control TEXT,
+
+  lifestyle_recommendations TEXT,
+  rehabilitation TEXT,
+
+  surgical_plan TEXT,
+  endovascular TEXT,
+  botulinum_toxin TEXT,
+
+  physiotherapy TEXT,
+  occupational_therapy TEXT,
+  speech_therapy TEXT,
+
+  follow_up_timing TEXT,
+  repeat_imaging TEXT,
+  repeat_labs TEXT,
+  monitoring TEXT,
+  warning_signs TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+    //neurology_medication
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_medications (
+  medication_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  medication_name TEXT,
+  dose TEXT,
+  route TEXT,
+  frequency TEXT,
+  duration TEXT,
+  purpose TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+    //neurology_notes
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_notes (
+  note_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  clinical_observations TEXT,
+  patient_questions TEXT,
+  caregiver_questions TEXT,
+  education_provided TEXT,
+  multidisciplinary_care TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+    //neurology_referrals
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_referrals (
+  referral_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  referral_name TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+    //neurology_labs
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_labs (
+  lab_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  lab_tests TEXT[],   -- array support
+  cbc_results TEXT,
+  electrolyte_results TEXT,
+  thyroid_results TEXT,
+  esr_crp_results TEXT,
+  autoimmune_results TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
+
+
+
+  //neurology_electrophysiology
+    await con.query(`
+CREATE TABLE IF NOT EXISTS neurology_electrophysiology (
+  ep_id SERIAL PRIMARY KEY,
+  encounter_id INT,
+
+  eeg_ordered TEXT,
+  ncs_ordered TEXT,
+  emg_ordered TEXT,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (encounter_id)
+  REFERENCES neurology_encounters(encounter_id)
+  ON DELETE CASCADE
+);
+`);
   } catch (error) {
     console.error("Table Creation Error:", error);
   }

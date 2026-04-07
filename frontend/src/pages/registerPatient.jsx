@@ -28,10 +28,9 @@ import {
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 
-function RegisterPatient({  onSave }) {
+function RegisterPatient({ onSave }) {
   const toast = useToast();
-      const navigate=useNavigate()
-
+  const navigate = useNavigate();
 
   const [tabIndex, setTabIndex] = useState(0);
   const [patients, setPatients] = useState([]);
@@ -59,21 +58,20 @@ function RegisterPatient({  onSave }) {
 
   const fetchPatients = async () => {
     try {
-       const token=localStorage.getItem("token")
-      const res = await fetch("http://localhost:3000/patient/getPatients",{
-        headers:{
-          "Authorization": `Bearer ${token}`
-  }
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:3000/patient/getPatients", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       if (res.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("employee_id");
+        localStorage.removeItem("employee_name");
 
-  localStorage.removeItem("token");
-  localStorage.removeItem("employee_id");
-  localStorage.removeItem("employee_name");
-
-  navigate("/login");
-  return;
-}
+        navigate("/login");
+        return;
+      }
 
       const result = await res.json();
       setPatients(result.data || []);
@@ -83,16 +81,16 @@ function RegisterPatient({  onSave }) {
     }
   };
 
-  // 🔥 Handle Input Change with real-time filtering
+  //  Handle Input Change with real-time filtering
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // 🚫 Prevent letters in contact numbers
+    //  Prevent letters in contact numbers
     if (name === "contact_number" || name === "emergency_contact_number") {
       if (!/^\d*$/.test(value)) return;
     }
 
-    // 🚫 Prevent numbers & special chars in names
+    //  Prevent numbers & special chars in names
     if (name === "patient_name" || name === "emergency_name") {
       if (!/^[A-Za-z\s]*$/.test(value)) return;
     }
@@ -170,27 +168,35 @@ function RegisterPatient({  onSave }) {
     const method = editId ? "PUT" : "POST";
     try {
       setLoading(true);
-        const token=localStorage.getItem("token")
+      const token = localStorage.getItem("token");
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json",
-          headers:{
-          "Authorization": `Bearer ${token}`
-  }
-         },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(formData),
       });
-if (res.status === 401) {
 
-  localStorage.removeItem("token");
-  localStorage.removeItem("employee_id");
-  localStorage.removeItem("employee_name");
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("employee_id");
+        localStorage.removeItem("employee_name");
 
-  navigate("/login");
-  return;
-}
+        navigate("/login");
+        return;
+      }
 
       const result = await res.json();
+
+      if (!res.ok) {
+        toast({
+          title: result.message || "Operation Failed",
+          status: "error",
+          duration: 3000,
+        });
+        return;
+      }
 
       toast({
         title: editId ? "Updated Successfully" : "Registered Successfully",
@@ -200,13 +206,12 @@ if (res.status === 401) {
       if (editId) {
         setPatients((prev) =>
           prev.map((p) =>
-            p.patient_id === editId ? { ...p, ...formData } : p
-          )
+            p.patient_id === editId ? { ...p, ...formData } : p,
+          ),
         );
       } else {
         setPatients((prev) => [result.data, ...prev]);
       }
-
 
       if (result?.data && typeof onSave === "function") {
         onSave(result.data, !!editId);
@@ -236,22 +241,24 @@ if (res.status === 401) {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this record?")) return;
     try {
-       const token=localStorage.getItem("token")
-      const res=await fetch(`http://localhost:3000/patient/deletePatient/${id}`, {
-        method: "DELETE",
-        headers:{
-          "Authorization": `Bearer ${token}`
-  }
-      });
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `http://localhost:3000/patient/deletePatient/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
       if (res.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("employee_id");
+        localStorage.removeItem("employee_name");
 
-  localStorage.removeItem("token");
-  localStorage.removeItem("employee_id");
-  localStorage.removeItem("employee_name");
-
-  navigate("/login");
-  return;
-}
+        navigate("/login");
+        return;
+      }
 
       setPatients((prev) => prev.filter((p) => p.patient_id !== id));
       toast({ title: "Deleted Successfully", status: "success" });

@@ -9,6 +9,8 @@ import {
   FaFileAlt,
   FaUserInjured,
   FaUserPlus,
+  FaBrain,
+  FaList,
 } from "react-icons/fa";
 import { MdFeedback } from "react-icons/md";
 
@@ -29,8 +31,10 @@ function Sidebar() {
     { name: "Employee Request", path: "/employee-request", icon: FaFileAlt },
 
     // Patients
-    { name: "Patient Records", path: "/patient-records", icon: FaUserInjured },
+    
     { name: "patient register", path: "/patient-register", icon: FaUserPlus },
+    { name: "neurology-form", path: "/NeurologyForm", icon: FaBrain },
+    { name: "Neurology Form List", path: "/neurologyRecords", icon: FaList },
 
 
   ];
