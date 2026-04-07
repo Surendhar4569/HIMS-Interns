@@ -1,10 +1,14 @@
 
 import React from 'react'
+import EmployeeDashboard from './employeeDashboard'
+
 
 const home = () => {
   return (
-    <div>home</div>
+    <div>
+      <EmployeeDashboard />
+    </div>
   )
 }
+export default home;
 
-export default home

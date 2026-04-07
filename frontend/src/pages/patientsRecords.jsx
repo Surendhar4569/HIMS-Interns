@@ -108,10 +108,12 @@ function PatientRecords() {
         prev.map((p) =>
           p.patient_id === updatedPatient.patient_id ? updatedPatient : p,
         ),
+        setSelectedPatient(null),
       );
     }
   };
 
+  
   /* UPDATE CLICK */
   const handleUpdateClick = (patient) => {
     setSelectedPatient(patient);
@@ -200,5 +202,7 @@ function PatientRecords() {
     </Box>
   );
 }
+
+
 
 export default PatientRecords;

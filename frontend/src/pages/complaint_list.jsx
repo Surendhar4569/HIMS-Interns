@@ -31,7 +31,15 @@ import {
   ModalFooter,
   Avatar,
   IconButton,
+  TabList,
+  Tabs,
+  Tab,
+  TabPanels,
+  TabPanel,
+  Divider
 } from "@chakra-ui/react";
+import { Alert, AlertIcon, AlertTitle, AlertDescription } from "@chakra-ui/react";
+
 import {
   DownloadIcon,
   RepeatIcon,
@@ -39,14 +47,21 @@ import {
   ChevronRightIcon,
   DeleteIcon,
   SearchIcon,
+  Icon,
 } from "@chakra-ui/icons";
 // eslint-disable-next-line no-unused-vars
 import { AnimatePresence, motion } from "framer-motion";
+import { 
+  FiStar 
+} from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import OTPVerificationModal from "./OTPVerificationModal";
 
 export default function ComplaintList() {
   const toast = useToast();
 
+// eslint-disable-next-line no-unused-vars
+  const [activeTab, setActiveTab] = useState("before");
   const navigate=useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {
@@ -54,6 +69,7 @@ export default function ComplaintList() {
     onOpen: onAssignOpen,
     onClose: onAssignClose,
   } = useDisclosure();
+// eslint-disable-next-line no-unused-vars
   const [previewFile, setPreviewFile] = useState("");
 
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -82,12 +98,21 @@ export default function ComplaintList() {
   const [raisedByType, setRaisedByType] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
   const [deptOptions, setDeptOptions] = useState([]);
-
+// eslint-disable-next-line no-unused-vars
   const [assignedInfo, setAssignedInfo] = useState(null);
   const [view, setView] = useState("list");
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
+   const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
+  const [complaintToClose, setComplaintToClose] = useState(null);
+
+  const [feedbackRefreshTrigger, setFeedbackRefreshTrigger] = useState(0);
+// Function to handle OTP closure from modal
+const handleOTPClosure = (complaint) => {
+  setComplaintToClose(complaint);
+  setIsOTPModalOpen(true);
+};
   // Fetch complaints
   const fetchComplaints = async () => {
     try {
@@ -162,8 +187,6 @@ export default function ComplaintList() {
     fetchEmployeesData();
   }, []);
 
-
-
   useEffect(() => {
     if (!isAssignOpen) return;
 
@@ -220,126 +243,189 @@ export default function ComplaintList() {
     setPage(1);
   };
 
-  // Update this function to take the whole complaint object
-  const openAttachmentModal = (complaint) => {
 
-    const path = complaint.attachment_path || complaint.file_name;
-    if (!path) {
-      toast({
-        title: "No attachment available",
-        status: "warning",
-        duration: 2000,
-      });
+
+  const openAttachmentModal = (complaint) => {
+  setSelectedComplaint(complaint);
+  onOpen();
+};
+
+
+  const downloadAttachment = async (url) => {
+  if (!url) return;
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const filename = url.split("/").pop() || "download";
+    const link = document.createElement("a");
+    link.href = window.URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (err) {
+    toast({
+      title: "Download failed",
+      description: err.message,
+      status: "error",
+      duration: 2000,
+    });
+  }
+};
+//   const handleAssignClick = async (complaint) => {
+//     setSelectedComplaint(complaint);
+
+//     try {
+//       const token = localStorage.getItem("token");
+//       const res = await fetch(
+//         `http://localhost:3000/complaints/get-complaint-assigned/${complaint.complaint_id}`,{
+//           headers:{
+//           "Authorization": `Bearer ${token}`
+//   }
+// }
+//       );
+//       if (res.status === 401) {
+
+//   localStorage.removeItem("token");
+//   localStorage.removeItem("employee_id");
+//   localStorage.removeItem("employee_name");
+
+//   navigate("/login");
+//   return;
+// }
+
+
+//       const data = await res.json();
+
+//       if (res.ok && data.success && data.data.length > 0) {
+//         const assignment = data.data.find(
+//           (a) => a.complaint_id === complaint.complaint_id,
+//         );
+
+//         setSelectedEmployeeId(
+//           assignment?.assigned_employee_id
+//             ? assignment.assigned_employee_id.toString()
+//             : null,
+//         );
+//         //setOriginalEmployeeId(assignment.assigned_employee_id.toString());
+//         setOriginalEmployeeId(
+//           assignment?.assigned_employee_id
+//             ? assignment.assigned_employee_id.toString()
+//             : null,
+//         );
+//         // IMPORTANT: store assignment_id
+//         setCurrentAssignment(assignment);
+
+//         setSelectedComplaint((prev) => ({
+//           ...prev,
+//           assignment_id: assignment.assignment_id,
+//         }));
+//       } else {
+//         setSelectedEmployeeId(null);
+//         setOriginalEmployeeId(null);
+//         setCurrentAssignment(null);
+
+//         setSelectedComplaint((prev) => ({
+//           ...prev,
+//           assignment_id: null,
+//         }));
+//       }
+//     } catch (err) {
+//       console.error("Failed to fetch assignment:", err);
+
+//       setSelectedEmployeeId(null);
+//       setOriginalEmployeeId(null);
+//       setCurrentAssignment(null);
+//     }
+
+//     setAssignDeptFilter(complaint.department || "");
+//     setSearchTerm("");
+//     setSearchResults([]);
+//     setSelectedEmployeeData(null);
+
+//     onAssignOpen();
+//   };
+const handleAssignClick = async (complaint) => {
+  setSelectedComplaint(complaint);
+
+  // Show warning if complaint is closed
+  if (complaint.status === "CLOSED") {
+    toast({
+      title: "Reopening Complaint",
+      description: "This complaint is closed. It will be reopened and assigned to a new employee.",
+      status: "warning",
+      duration: 5000,
+      isClosable: true,
+    });
+  }
+
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch(
+      `http://localhost:3000/complaints/get-complaint-assigned/${complaint.complaint_id}`,
+      {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      }
+    );
+    
+    if (res.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("employee_id");
+      localStorage.removeItem("employee_name");
+      navigate("/login");
       return;
     }
 
-    // Set the assignment info from the complaint object
-    // Note: Ensure your backend API returns 'assigned_employee_name' or similar
-    setAssignedInfo({
-      name: complaint.employee_name || "Not Assigned",
-      id: complaint.assigned_employee_id || "N/A",
-      dept: complaint.department,
-    });
+    const data = await res.json();
 
-    let url = /^https?:\/\//i.test(path)
-      ? path
-      : `${window.location.origin}/${path.startsWith("/") ? path.slice(1) : path}`;
-    setPreviewFile(url);
-    onOpen();
-  };
-
-  const downloadAttachment = async (url) => {
-    if (!url) return;
-    try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const filename = url.split("/").pop();
-      const link = document.createElement("a");
-      link.href = window.URL.createObjectURL(blob);
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      toast({
-        title: "Download failed",
-        description: err.message,
-        status: "error",
-        duration: 2000,
-      });
-    }
-  };
-
-  const handleAssignClick = async (complaint) => {
-    setSelectedComplaint(complaint);
-
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `http://localhost:3000/complaints/get-complaint-assigned/${complaint.complaint_id}`,{
-          headers:{
-          "Authorization": `Bearer ${token}`
-  }
-}
+    if (res.ok && data.success && data.data.length > 0) {
+      const assignment = data.data.find(
+        (a) => a.complaint_id === complaint.complaint_id,
       );
-      if (res.status === 401) {
 
-  localStorage.removeItem("token");
-  localStorage.removeItem("employee_id");
-  localStorage.removeItem("employee_name");
+      setSelectedEmployeeId(
+        assignment?.assigned_employee_id
+          ? assignment.assigned_employee_id.toString()
+          : null,
+      );
+      setOriginalEmployeeId(
+        assignment?.assigned_employee_id
+          ? assignment.assigned_employee_id.toString()
+          : null,
+      );
+      setCurrentAssignment(assignment);
 
-  navigate("/login");
-  return;
-}
-
-
-      const data = await res.json();
-
-      if (res.ok && data.success && data.data.length > 0) {
-        const assignment = data.data.find(
-          (a) => a.complaint_id === complaint.complaint_id,
-        );
-
-        setSelectedEmployeeId(
-          assignment?.assigned_employee_id
-            ? assignment.assigned_employee_id.toString()
-            : null,
-        );
-        setOriginalEmployeeId(assignment.assigned_employee_id.toString());
-
-        // IMPORTANT: store assignment_id
-        setCurrentAssignment(assignment);
-
-        setSelectedComplaint((prev) => ({
-          ...prev,
-          assignment_id: assignment.assignment_id,
-        }));
-      } else {
-        setSelectedEmployeeId(null);
-        setOriginalEmployeeId(null);
-        setCurrentAssignment(null);
-
-        setSelectedComplaint((prev) => ({
-          ...prev,
-          assignment_id: null,
-        }));
-      }
-    } catch (err) {
-      console.error("Failed to fetch assignment:", err);
-
+      setSelectedComplaint((prev) => ({
+        ...prev,
+        assignment_id: assignment.assignment_id,
+      }));
+    } else {
       setSelectedEmployeeId(null);
       setOriginalEmployeeId(null);
       setCurrentAssignment(null);
+
+      setSelectedComplaint((prev) => ({
+        ...prev,
+        assignment_id: null,
+      }));
     }
+  } catch (err) {
+    console.error("Failed to fetch assignment:", err);
+    setSelectedEmployeeId(null);
+    setOriginalEmployeeId(null);
+    setCurrentAssignment(null);
+  }
 
-    setAssignDeptFilter(complaint.department || "");
-    setSearchTerm("");
-    setSearchResults([]);
-    setSelectedEmployeeData(null);
+  setAssignDeptFilter(complaint.department || "");
+  setSearchTerm("");
+  setSearchResults([]);
+  setSelectedEmployeeData(null);
 
-    onAssignOpen();
-  };
-  const handleUpdate = async () => {
+  onAssignOpen();
+};  
+const handleUpdate = async () => {
     if (!selectedEmployeeId) {
       toast({
         title: "No Employee Selected",
@@ -360,22 +446,19 @@ export default function ComplaintList() {
         : "http://localhost:3000/complaints/post-complaint-assigned";
 
       const method = isUpdate ? "PUT" : "POST";
+       const changed_by_id = parseInt(localStorage.getItem("employee_id"), 10);
+
 
       const bodyData = isUpdate
         ? {
             assigned_employee_id: parseInt(selectedEmployeeId, 10),
-            changed_by: 100,
-            remarks: "Updated from UI",
+            changed_by: changed_by_id,
           }
         : {
             complaint_id: selectedComplaint.complaint_id,
             assigned_employee_id: parseInt(selectedEmployeeId, 10),
-            changed_by: 100,
-            remarks: "Assigned from UI",
+            changed_by: changed_by_id,
           };
-
-      console.log("API:", url);
-      console.log("Body:", bodyData);
        const token=localStorage.getItem("token")
       const response = await fetch(url, {
         method: method,
@@ -409,6 +492,19 @@ export default function ComplaintList() {
 
         onAssignClose();
         fetchComplaints(); // refresh table
+         localStorage.setItem('complaint_updated', JSON.stringify({
+      complaint_id: selectedComplaint.complaint_id,
+      timestamp: Date.now(),
+      reopened: result.data?.reopened || false,
+      feedback_cleared: result.data?.feedback_cleared || false
+    }));
+         if (window.refreshPatientDashboard) {
+        window.refreshPatientDashboard();
+      }
+      
+      // Also dispatch a storage event for cross-tab communication
+      localStorage.setItem('complaint_updated', Date.now().toString());
+      localStorage.removeItem('complaint_updated');
       }
     } catch (error) {
       console.error("Update Error:", error);
@@ -461,7 +557,13 @@ export default function ComplaintList() {
         await fetchComplaints(); // refresh list first
 
         onAssignClose(); // then close modal
-
+        // Force refresh patient dashboard
+      if (window.refreshPatientDashboard) {
+        window.refreshPatientDashboard();
+      }
+        // Dispatch storage event for cross-tab communication
+      localStorage.setItem('complaint_updated', Date.now().toString());
+      localStorage.removeItem('complaint_updated');
         toast({
           title: "Complaint Unassigned",
           status: "success",
@@ -713,7 +815,7 @@ export default function ComplaintList() {
                       size="xs"
                       colorScheme="blue"
                       onClick={() => openAttachmentModal(c)}
-                      isDisabled={!c.attachment_path && !c.file_name}
+                      isDisabled={!c.attachments || c.attachments.length === 0}
                     >
                       View
                     </Button>
@@ -823,7 +925,7 @@ export default function ComplaintList() {
                           w="100%"
                           mt={2}
                           onClick={() => openAttachmentModal(c)}
-                          isDisabled={!c.attachment_path && !c.file_name}
+                          isDisabled={!c.attachments || c.attachments.length === 0}
                         >
                           View Attachment
                         </Button>
@@ -874,103 +976,272 @@ export default function ComplaintList() {
         </Flex>
       </Box>
 
-      {/* Attachment Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Attachment Preview</ModalHeader>
 
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4}>
-              <Box
-                p={3}
-                bg="blue.50"
-                borderRadius="lg"
-                border="1px solid"
-                borderColor="blue.100"
-              >
-                <Flex
-                    justify="space-between"
-                    align="center"
-                    p={3}
-                    borderWidth="1px"
-                    borderRadius="md"
-                    bg="gray.50"
-                  >
-                    <HStack spacing={3}>
-                      <Avatar
-                        size="sm"
-                        name={assignedInfo?.name}
-                        bg="blue.500"
-                      />
+       {/* Attachment Modal */}
+        <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Complaint Details & Images</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody pb={6}>
+              <Tabs onChange={(index) => setActiveTab(index === 0 ? "before" : "after")}>
+                <TabList>
+                  <Tab>Before ({selectedComplaint?.before_images?.length || 0})</Tab>
+                  <Tab>After ({selectedComplaint?.after_images?.length || 0})</Tab>
+                </TabList>
 
-                      <VStack align="start" spacing={0}>
-                        <Text fontSize="sm" fontWeight="semibold">
-                          {assignedInfo?.name || "Not Assigned"}
-                        </Text>
+                <TabPanels>
+                  <TabPanel>
+                    {selectedComplaint?.before_images?.length > 0 ? (
+                      selectedComplaint.before_images.map((img, idx) => (
+                        <Box key={idx} mb={4}>
+                          <Image 
+                            src={img.file_name} 
+                            alt={`Before ${idx + 1}`} 
+                            maxH="400px" 
+                            mx="auto"
+                            fallbackSrc="https://via.placeholder.com/400x300?text=Loading..."
+                          />
+                          <HStack justify="center" mt={2}>
+                            <Button 
+                              size="sm" 
+                              colorScheme="blue" 
+                              onClick={() => window.open(img.file_name, '_blank')}
+                            >
+                              View Full Size
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              colorScheme="green" 
+                              leftIcon={<DownloadIcon />}
+                              onClick={() => downloadAttachment(img.file_name)}
+                            >
+                              Download
+                            </Button>
+                          </HStack>
+                        </Box>
+                      ))
+                    ) : (
+                      <Text textAlign="center" py={10} color="gray.500">
+                        No before images available
+                      </Text>
+                    )}
+                  </TabPanel>
+                  
+                  <TabPanel>
+                    {selectedComplaint?.after_images?.length > 0 ? (
+                      selectedComplaint.after_images.map((img, idx) => (
+                        <Box key={idx} mb={4}>
+                          <Image 
+                            src={img.file_name} 
+                            alt={`After ${idx + 1}`} 
+                            maxH="400px" 
+                            mx="auto"
+                            fallbackSrc="https://via.placeholder.com/400x300?text=Loading..."
+                          />
+                          <HStack justify="center" mt={2}>
+                            <Button 
+                              size="sm" 
+                              colorScheme="blue" 
+                              onClick={() => window.open(img.file_name, '_blank')}
+                            >
+                              View Full Size
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              colorScheme="green" 
+                              leftIcon={<DownloadIcon />}
+                              onClick={() => downloadAttachment(img.file_name)}
+                            >
+                              Download
+                            </Button>
+                          </HStack>
+                        </Box>
+                      ))
+                    ) : (
+                      <Text textAlign="center" py={10} color="gray.500">
+                        No after images available
+                      </Text>
+                    )}
+                  </TabPanel>
+                </TabPanels>
+              </Tabs>
 
-                        <Text fontSize="xs" color="gray.600">
-                          ID: {assignedInfo?.id || "--"}
-                        </Text>
-
-                        <Text fontSize="xs" color="gray.600">
-                          Dept: {assignedInfo?.dept || "--"}
-                        </Text>
-                      </VStack>
-                    </HStack>
-
-                    <Badge
+              {/* Add Divider and Complaint Info Section */}
+              <Divider my={4} />
+              
+              <Box>
+                <SimpleGrid columns={2} spacing={4}>
+                  <Box>
+                    <Text fontSize="xs" color="gray.500">Ticket Number</Text>
+                    <Text fontWeight="bold">{selectedComplaint?.ticket_number}</Text>
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="gray.500">Status</Text>
+                    <Badge 
                       colorScheme={
-                        assignedInfo?.name === "Not Assigned" ? "red" : "green"
+                        selectedComplaint?.status === "RESOLVED" ? "green" :
+                        selectedComplaint?.status === "CLOSED" ? "gray" : "blue"
                       }
-                      variant="solid"
-                      px={3}
+                      fontSize="sm"
+                      px={2}
                       py={1}
-                      borderRadius="full"
-                      fontSize="xs"
                     >
-                      {assignedInfo?.name === "Not Assigned"
-                        ? "Pending"
-                        : "Assigned"}
+                      {selectedComplaint?.status}
                     </Badge>
-                  </Flex>
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="gray.500">Priority</Text>
+                    <Badge 
+                      colorScheme={
+                        selectedComplaint?.priority === "HIGH" ? "red" :
+                        selectedComplaint?.priority === "MEDIUM" ? "orange" : "green"
+                      }
+                      fontSize="sm"
+                      px={2}
+                      py={1}
+                    >
+                      {selectedComplaint?.priority}
+                    </Badge>
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="gray.500">Department</Text>
+                    <Text>{selectedComplaint?.department}</Text>
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="gray.500">Raised By Name</Text>
+                    <Text fontWeight="medium">{selectedComplaint?.raised_by_name || "N/A"}</Text>
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="gray.500">Raised By Type</Text>
+                    <Badge 
+                      colorScheme={
+                        selectedComplaint?.raised_by_type === "EMPLOYEE" ? "purple" : "orange"
+                      }
+                      fontSize="xs"
+                      px={2}
+                      py={1}
+                    >
+                      {selectedComplaint?.raised_by_type || "N/A"}
+                    </Badge>
+                  </Box>
+
+                  {/* Added Mobile Number (if available) */}
+                  {selectedComplaint?.raised_by_mobile && (
+                    <Box>
+                      <Text fontSize="xs" color="gray.500">Mobile Number</Text>
+                      <Text fontWeight="medium">
+                        {selectedComplaint?.raised_by_mobile.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')}
+                      </Text>
+                    </Box>
+                  )}
+
+                  {/* Added Assigned Employee Info (if assigned) */}
+                  {selectedComplaint?.employee_name && (
+                    <Box>
+                      <Text fontSize="xs" color="gray.500">Assigned To</Text>
+                      <Text fontWeight="medium">{selectedComplaint?.employee_name}({selectedComplaint?.assigned_employee_id || "N/A"})</Text>
+                    </Box>
+                  )}
+                </SimpleGrid>
+
+                {/* Feedback Section - Show for CLOSED complaints */}
+                {selectedComplaint?.status === "CLOSED" && (
+                  <Box mt={4}>
+                    <Divider my={4} />
+                    <Text fontWeight="bold" mb={3}>Feedback Information</Text>
+                    
+                    {/* Fetch and display feedback */}
+                    <FeedbackDisplay   key={selectedComplaint?.complaint_id + (selectedComplaint?.updated_at || Date.now())}
+                    complaintId={selectedComplaint?.complaint_id}
+                    refreshTrigger={feedbackRefreshTrigger} />
+                  </Box>
+                )}
+
+                {/* Close Complaint Button - Only show for RESOLVED complaints */}
+                {selectedComplaint?.status === "RESOLVED" && (
+                  <Box mt={4}>
+                    <Alert status="info" borderRadius="md" mb={3}>
+                      <AlertIcon />
+                      <AlertDescription fontSize="sm">
+                        This complaint has been resolved and is ready for closure.
+                        Click the button below to close it with OTP verification.
+                      </AlertDescription>
+                    </Alert>
+                    <Button
+                      colorScheme="green"
+                      size="md"
+                      width="full"
+                      onClick={() => handleOTPClosure(selectedComplaint)}
+                    >
+                      Close Complaint (OTP Required)
+                    </Button>
+                  </Box>
+                )}
+
+                {/* Show message for already closed complaints */}
+                {selectedComplaint?.status === "CLOSED" && (
+                  <Box mt={4}>
+                    <Alert status="success" borderRadius="md">
+                      <AlertIcon />
+                      <AlertDescription fontSize="sm">
+                        This complaint is closed.
+                      </AlertDescription>
+                    </Alert>
+                  </Box>
+                )}
               </Box>
+            </ModalBody>
+            <ModalFooter>
+              <Button colorScheme="blue" mr={3} onClick={onClose}>
+                Close
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
 
-              {previewFile.endsWith(".pdf") ? (
-                <iframe
-                  src={previewFile}
-                  style={{ width: "100%", height: "500px" }}
-                  title="Preview"
-                />
-              ) : (
-                <Image src={previewFile} alt="Preview" maxH="500px" w="full" />
-              )}
-              <HStack spacing={3}>
-                <Button
-                  colorScheme="blue"
-                  onClick={() => window.open(previewFile, "_blank")}
-                >
-                  Preview
-                </Button>
-                <Button
-                  leftIcon={<DownloadIcon />}
-                  colorScheme="green"
-                  onClick={() => downloadAttachment(previewFile)}
-                >
-                  Download
-                </Button>
-              </HStack>
-            </VStack>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+{/* OTP Verification Modal - Add this after the Attachment Modal */}
+        <OTPVerificationModal
+          isOpen={isOTPModalOpen}
+          onClose={() => {
+            setIsOTPModalOpen(false);
+            setComplaintToClose(null);
+          }}
+          complaint={complaintToClose}
+          onSuccess={() => {
+            // Refresh the complaint list
+            fetchComplaints();
+                // Trigger feedback refresh
+    setFeedbackRefreshTrigger(prev => prev + 1);
 
+            // Close the attachment modal
+            onClose();
+            toast({
+              title: "Complaint Closed",
+              description: "The complaint has been successfully closed",
+              status: "success",
+              duration: 3000,
+            });
+          }}
+        />
       {/* Assign Employee Modal */}
       <Modal isOpen={isAssignOpen} onClose={onAssignClose} isCentered size="xl">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Assign Employee</ModalHeader>
+          <ModalHeader>
+            {selectedComplaint?.status === "CLOSED" && (
+                <Alert status="warning" mb={4} borderRadius="md">
+                  <AlertIcon />
+                  <Box>
+                    <AlertTitle>This complaint is closed</AlertTitle>
+                    <AlertDescription fontSize="sm">
+                      Reopening this complaint will set its status back to ASSIGNED.
+                      The previous closure will be recorded in the history.
+                    </AlertDescription>
+                  </Box>
+                </Alert>
+              )}
+          </ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             {selectedComplaint && (
@@ -1195,6 +1466,127 @@ export default function ComplaintList() {
   );
 }
 
+const FeedbackDisplay = ({ complaintId, refreshTrigger }) => {
+  const [feedback, setFeedback] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      if (!complaintId) return;
+      
+      try {
+        setLoading(true);
+        setFeedback(null);
+        setError(null);
+        
+        const token = localStorage.getItem("token");
+        const res = await fetch(
+          `http://localhost:3000/complaints/get-feedback/${complaintId}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          }
+        );
+
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("employee_id");
+          localStorage.removeItem("employee_name");
+          window.location.href = "/login";
+          return;
+        }
+
+        const data = await res.json();
+        
+        // FIX: Check for data.data.feedback (new API structure)
+        if (data.success && data.data && data.data.feedback) {
+          setFeedback(data.data.feedback);
+        } else {
+          setFeedback(null);
+        }
+      } catch (err) {
+        console.error("Error fetching feedback:", err);
+        setError("Failed to load feedback");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeedback();
+  }, [complaintId, refreshTrigger]);
+
+  const formatDate = (dateValue) => {
+    if (!dateValue) return "Date not available";
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return "Date not available";
+    return date.toLocaleString();
+  };
+
+  if (loading) {
+    return (
+      <Flex justify="center" py={4}>
+        <Spinner size="sm" />
+      </Flex>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert status="error" borderRadius="md">
+        <AlertIcon />
+        <AlertDescription fontSize="sm">{error}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (feedback) {
+    return (
+      <Box bg="gray.50" p={4} borderRadius="md">
+        <VStack align="stretch" spacing={3}>
+          <Flex justify="space-between" align="center">
+            <Text fontWeight="bold">Satisfaction Rating</Text>
+            <HStack spacing={1}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Icon
+                  key={star}
+                  as={FiStar}
+                  w={5}
+                  h={5}
+                  color={star <= feedback.satisfaction_rating ? "yellow.400" : "gray.300"}
+                  fill={star <= feedback.satisfaction_rating ? "yellow.400" : "none"}
+                />
+              ))}
+            </HStack>
+          </Flex>
+          
+          {feedback.comment && (
+            <Box>
+              <Text fontWeight="bold" mb={1}>Comment</Text>
+              <Text fontSize="sm">{feedback.comment}</Text>
+            </Box>
+          )}
+          
+          <Flex justify="space-between" align="center" pt={2}>
+            <Text fontSize="xs" color="gray.500">
+              Submitted on: {formatDate(feedback.submitted_at)}
+            </Text>
+          </Flex>
+        </VStack>
+      </Box>
+    );
+  }
+
+  return (
+    <Alert status="info" borderRadius="md">
+      <AlertIcon />
+      <AlertDescription fontSize="sm">
+        No feedback submitted yet for this complaint.
+      </AlertDescription>
+    </Alert>
+  );
+};
 // Stat Card
 function StatCard({ title, value, color, total }) {
   const percentage = Math.round((value / total) * 100);

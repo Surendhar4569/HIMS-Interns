@@ -4,3 +4,7 @@ npm i pg
 npm i cors
 npm i dotenv
 npm i multer
+npm i helmet 
+npm i morgan
+npm i express-validator
+
